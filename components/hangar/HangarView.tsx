@@ -483,7 +483,7 @@ export function HangarView({
         onClose={() => setEditingLotId(null)}
         onSave={handleSaveLotPatch}
       />
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} style={{ pointerEvents: "none" }}>
         {activeDragLot ? (
           <div
             className={`lot ${statutClass(activeDragLot.statut)} ${
@@ -492,6 +492,7 @@ export function HangarView({
             style={{
               cursor: "grabbing",
               boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
+              pointerEvents: "none",
             }}
           >
             <div className="lot-num">{activeDragLot.nom}</div>
