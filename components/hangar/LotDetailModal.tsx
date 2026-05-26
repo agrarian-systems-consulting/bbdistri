@@ -11,14 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/Combobox";
+import { Select } from "@/components/Select";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUTS_TRIAGE } from "@/lib/types/domain";
 import type {
@@ -173,42 +167,34 @@ export function LotDetailModal({
             <div className="space-y-1.5">
               <Label htmlFor="lot-statut">Statut triage</Label>
               <Select
+                id="lot-statut"
                 value={statut}
-                onValueChange={(v) => setStatut(v as StatutTriage)}
+                onChange={(e) => setStatut(e.target.value as StatutTriage)}
               >
-                <SelectTrigger id="lot-statut" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUTS_TRIAGE.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                {STATUTS_TRIAGE.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lot-bioc2">Bio / C2</Label>
               <Select
+                id="lot-bioc2"
                 value={bioC2}
-                onValueChange={(v) => setBioC2(v as BioC2Choice)}
+                onChange={(e) => setBioC2(e.target.value as BioC2Choice)}
               >
-                <SelectTrigger id="lot-bioc2" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bio">Bio</SelectItem>
-                  <SelectItem value="C2">C2</SelectItem>
-                  <SelectItem value="none">— (non renseigné)</SelectItem>
-                </SelectContent>
+                <option value="Bio">Bio</option>
+                <option value="C2">C2</option>
+                <option value="none">— (non renseigné)</option>
               </Select>
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label>Emplacements</Label>
-            <div className="flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
+            <div className="flex flex-wrap gap-1.5 min-h-8 px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
               {empNames.length > 0 ? (
                 empNames.map((n) => (
                   <span
@@ -228,7 +214,7 @@ export function LotDetailModal({
 
           <div className="space-y-1.5">
             <Label>Caissons métalliques</Label>
-            <div className="flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
+            <div className="flex flex-wrap gap-1.5 min-h-8 px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
               {caissonIds.length > 0 ? (
                 caissonIds.map((id) => {
                   const num = caissonsById[id] ?? id;
