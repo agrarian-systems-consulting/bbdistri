@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Combobox } from "@/components/Combobox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -115,7 +116,7 @@ export function LotDetailModal({
     caissonsDirty;
 
   const addCaisson = (id: string) => {
-    if (caissonIds.includes(id)) return;
+    if (!id || caissonIds.includes(id)) return;
     setCaissonIds([...caissonIds, id]);
   };
 
@@ -254,30 +255,20 @@ export function LotDetailModal({
                 </span>
               )}
             </div>
-            <Select
+            <Combobox
+              options={availableCaissons.map(({ id, numero }) => ({
+                value: id,
+                label: `Caisson ${numero}`,
+              }))}
               value=""
-              onValueChange={(id) => {
-                if (typeof id === "string" && id.length > 0) addCaisson(id);
-              }}
+              onChange={addCaisson}
+              placeholder={
+                availableCaissons.length === 0
+                  ? "Aucun caisson disponible"
+                  : "Ajouter un caisson…"
+              }
               disabled={availableCaissons.length === 0}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={
-                    availableCaissons.length === 0
-                      ? "Aucun caisson disponible"
-                      : "Ajouter un caisson…"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCaissons.map(({ id, numero }) => (
-                  <SelectItem key={id} value={id}>
-                    Caisson {numero}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-1.5">
