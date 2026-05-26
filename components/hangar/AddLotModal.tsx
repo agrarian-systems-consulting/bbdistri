@@ -52,7 +52,6 @@ export function AddLotModal({
   onAdd,
 }: Props) {
   const [selectedLotId, setSelectedLotId] = useState("");
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!emplacement) return;
@@ -93,15 +92,10 @@ export function AddLotModal({
         .filter((n): n is string => Boolean(n))
     : [];
 
-  const submit = async () => {
-    if (!selectedLot || alreadyHere || saving) return;
-    setSaving(true);
-    try {
-      await onAdd(selectedLot, emplacement);
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+  const submit = () => {
+    if (!selectedLot || alreadyHere) return;
+    void onAdd(selectedLot, emplacement);
+    onClose();
   };
 
   return (
@@ -198,14 +192,11 @@ export function AddLotModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+          <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button
-            onClick={submit}
-            disabled={!selectedLot || alreadyHere || saving}
-          >
-            {saving ? "Ajout…" : "Ajouter ici"}
+          <Button onClick={submit} disabled={!selectedLot || alreadyHere}>
+            Ajouter ici
           </Button>
         </DialogFooter>
       </DialogContent>
