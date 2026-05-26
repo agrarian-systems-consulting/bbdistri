@@ -1002,23 +1002,32 @@ body.has-fullscreen::before {
   font-style: normal;
 }
 
-/* Barre "temps restant" : uniquement sur les toasts marqués className "toast-undo".
-   On passe explicitement cette classe sur les success qui ont un bouton Annuler. */
-.toast-undo {
+/* Barre "temps restant" sur les toasts avec bouton Annuler.
+   On vise large : className appliquée par Sonner sur le <li data-sonner-toast>,
+   OU descendant marqué. Plusieurs sélecteurs pour couvrir toutes les configurations. */
+[data-sonner-toast].toast-undo,
+[data-sonner-toast]:has(> .toast-undo),
+[data-sonner-toast]:has(.toast-undo-marker) {
   position: relative !important;
   overflow: hidden !important;
 }
-.toast-undo::after {
+[data-sonner-toast].toast-undo::after,
+[data-sonner-toast]:has(> .toast-undo)::after,
+[data-sonner-toast]:has(.toast-undo-marker)::after {
   content: "";
   position: absolute;
   bottom: 0;
   left: 0;
+  right: 0;
   height: 3px;
-  width: 100%;
   background: #f59e0b;
   animation: toast-progress 5s linear forwards;
+  pointer-events: none;
+  z-index: 10;
 }
-.toast-undo:hover::after {
+[data-sonner-toast].toast-undo:hover::after,
+[data-sonner-toast]:has(> .toast-undo):hover::after,
+[data-sonner-toast]:has(.toast-undo-marker):hover::after {
   animation-play-state: paused;
 }
 @keyframes toast-progress {
