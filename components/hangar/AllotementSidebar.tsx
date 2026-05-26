@@ -84,7 +84,14 @@ export function AllotementSidebar({
           Aucun groupe d&apos;allotement parmi les lots placés.
         </p>
       ) : (
-        <Accordion className="allotement-accordion">
+        <Accordion
+          className="allotement-accordion"
+          value={hoveredKey ? [hoveredKey] : []}
+          onValueChange={(values: unknown) => {
+            const arr = Array.isArray(values) ? (values as string[]) : [];
+            onHoverKey(arr[arr.length - 1] ?? null);
+          }}
+        >
           {sorted.map(([key, lotIds]) => {
             const { cle, statut } = parseAllotementKey(key);
             const { code, libelle, destination } = parseLabel(cle);
@@ -95,8 +102,6 @@ export function AllotementSidebar({
                 key={key}
                 value={key}
                 className={`allotement-item ${active ? "active" : ""}`}
-                onMouseEnter={() => onHoverKey(key)}
-                onMouseLeave={() => onHoverKey(null)}
               >
                 <AccordionTrigger className="allotement-trigger">
                   <div className="allotement-trigger-inner">
