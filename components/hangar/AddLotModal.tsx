@@ -163,6 +163,11 @@ export function AddLotModal({
               }
               disabled={allLots === null}
             />
+            <p className="text-xs text-stone-500">
+              Les lots au statut <em>Épuisé</em> ou <em>Non affecté</em>{" "}
+              n&apos;apparaissent pas dans cette liste : modifier leur statut
+              dans Airtable d&apos;abord si tu dois les replacer.
+            </p>
           </div>
 
           <div className="rounded-md border border-stone-200 bg-stone-50 p-3 min-h-[140px]">

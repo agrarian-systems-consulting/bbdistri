@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const lots = await fetchAllLots();
-    const active = lots.filter((l) => l.statut !== "Epuisé");
+    const active = lots.filter(
+      (l) => l.statut !== "Epuisé" && l.statut !== "Non affecté",
+    );
     return NextResponse.json({ lots: active });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur Airtable";
