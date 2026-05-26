@@ -165,6 +165,7 @@ export function LotDetailModal({
     .filter(Boolean);
 
   return (
+    <>
     <Dialog
       open={Boolean(lot) && !confirmEpuiseOpen}
       onOpenChange={(next) => {
@@ -286,13 +287,14 @@ export function LotDetailModal({
           </div>
         </DialogFooter>
       </DialogContent>
+    </Dialog>
 
-      <Dialog
-        open={confirmEpuiseOpen}
-        onOpenChange={(next) => {
-          if (!next) setConfirmEpuiseOpen(false);
-        }}
-      >
+    <Dialog
+      open={confirmEpuiseOpen}
+      onOpenChange={(next) => {
+        if (!next) setConfirmEpuiseOpen(false);
+      }}
+    >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Marquer le lot comme épuisé ?</DialogTitle>
@@ -341,6 +343,6 @@ export function LotDetailModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 }
