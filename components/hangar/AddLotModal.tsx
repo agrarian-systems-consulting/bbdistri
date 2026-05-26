@@ -83,8 +83,9 @@ export function AddLotModal({
     );
   }
 
-  const alreadyHere =
-    selectedLot && selectedLot.emplacementIds.includes(emplacement.id);
+  const alreadyHere = Boolean(
+    selectedLot && selectedLot.emplacementIds.includes(emplacement.id),
+  );
   const otherEmpNames = selectedLot
     ? selectedLot.emplacementIds
         .filter((id) => id !== emplacement.id)
