@@ -998,7 +998,29 @@ body.is-dragging .lot-add-placeholder {
   gap: 4px;
   height: calc(100% - 8px);
 }
-.zone.fullscreen .allee { min-height: 0; }
+.zone.fullscreen .allee {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.zone.fullscreen .prep-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* Scrollbars discrètes en mode fullscreen */
+.zone.fullscreen .allee::-webkit-scrollbar,
+.zone.fullscreen .prep-content::-webkit-scrollbar {
+  width: 6px;
+}
+.zone.fullscreen .allee::-webkit-scrollbar-thumb,
+.zone.fullscreen .prep-content::-webkit-scrollbar-thumb {
+  background: var(--allee-border);
+  border-radius: 3px;
+}
+.zone.fullscreen .allee::-webkit-scrollbar-track,
+.zone.fullscreen .prep-content::-webkit-scrollbar-track {
+  background: transparent;
+}
 .zone.fullscreen .allee-header {
   font-size: 0.95rem;
   padding: 6px 0;
