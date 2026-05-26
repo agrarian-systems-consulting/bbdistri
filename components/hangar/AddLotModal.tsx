@@ -170,7 +170,7 @@ export function AddLotModal({
             </p>
           </div>
 
-          <div className="rounded-md border border-stone-200 bg-stone-50 p-3 min-h-[140px]">
+          <div className="rounded-md border border-stone-200 bg-stone-50 p-3 min-h-35">
             {selectedLot ? (
               <div className="space-y-2 text-sm">
                 <div className="flex items-baseline gap-3">
