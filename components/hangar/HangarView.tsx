@@ -14,7 +14,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   parseDraggableLotId,
@@ -113,6 +113,32 @@ export function HangarView({
 
   // Précharge en arrière-plan la liste légère des lots ajoutables (utilisée par
   // AddLotModal). Rafraîchie toutes les 5 minutes pour suivre Airtable.
+  const queryClient = useQueryClient();
+  /**
+   * Met à jour le cache TanStack Query ["lots", "addable"] de manière synchrone
+   * pour éviter qu'un lightLot stale provoque une collision sur la mutation suivante
+   * (ex: drag-drop fusion puis ajout d'une fraction trop vite après).
+   * Si le lot passe en statut Épuisé / Non affecté, on le retire du cache (cohérent
+   * avec le filtre côté API).
+   */
+  const updateAddableCache = useCallback(
+    (lotId: string, updates: Partial<LightLot>) => {
+      queryClient.setQueryData<LightLot[]>(["lots", "addable"], (old) => {
+        if (!old) return old;
+        if (
+          updates.statut === "Epuisé" ||
+          updates.statut === "Non affecté"
+        ) {
+          return old.filter((l) => l.id !== lotId);
+        }
+        return old.map((l) =>
+          l.id === lotId ? { ...l, ...updates } : l,
+        );
+      });
+    },
+    [queryClient],
+  );
+
   const { data: addableLots } = useQuery({
     queryKey: ["lots", "addable"],
     queryFn: async () => {
@@ -265,6 +291,9 @@ export function HangarView({
         await patchLotEmplacements(lot.id, previousIds);
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : déplacement annulé`);
+        updateAddableCache(lot.id, {
+          emplacementIds: previousIds,
+        });
       } catch (err) {
         toast.dismiss(loadingId);
         toast.error("Annulation échouée", {
@@ -272,7 +301,7 @@ export function HangarView({
         });
       }
     },
-    [applyLocalEmplacementsUpdate],
+    [applyLocalEmplacementsUpdate, updateAddableCache],
   );
 
   const handleLotClick = useCallback((lot: Lot) => {
@@ -285,8 +314,14 @@ export function HangarView({
 
   const handleAddLot = useCallback(
     async (lightLot: LightLot, emp: Emplacement) => {
-      if (lightLot.emplacementIds.includes(emp.id)) return;
-      const previousIds = [...lightLot.emplacementIds];
+      // La source de vérité fraîche est localLots (mise à jour optimistic après
+      // chaque mutation). lightLot peut venir d'un cache TanStack Query stale.
+      const freshLot = localLots.find((l) => l.id === lightLot.id);
+      const currentEmplacementIds = freshLot
+        ? freshLot.emplacementIds
+        : lightLot.emplacementIds;
+      if (currentEmplacementIds.includes(emp.id)) return;
+      const previousIds = [...currentEmplacementIds];
       const newIds = [...previousIds, emp.id];
 
       const localLot = localLots.find((l) => l.id === lightLot.id);
@@ -343,6 +378,7 @@ export function HangarView({
       try {
         await patchLotEmplacements(lightLot.id, newIds);
         toast.dismiss(loadingId);
+        updateAddableCache(lightLot.id, { emplacementIds: newIds });
         if (pendingCancel) {
           void undoMove(buildLotForUndo(), previousIds);
         } else {
@@ -371,7 +407,7 @@ export function HangarView({
         });
       }
     },
-    [applyLocalEmplacementsUpdate, localLots, undoMove],
+    [applyLocalEmplacementsUpdate, localLots, undoMove, updateAddableCache],
   );
 
   const undoLotPatch = useCallback(
@@ -404,6 +440,13 @@ export function HangarView({
         await patchLot(lot.id, payload);
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : modification annulée`);
+        const cacheUpdate: Partial<LightLot> = {};
+        if (previous.statut !== undefined) cacheUpdate.statut = previous.statut;
+        if (previous.emplacementIds !== undefined)
+          cacheUpdate.emplacementIds = previous.emplacementIds;
+        if (Object.keys(cacheUpdate).length > 0) {
+          updateAddableCache(lot.id, cacheUpdate);
+        }
       } catch (err) {
         toast.dismiss(loadingId);
         toast.error("Annulation échouée", {
@@ -411,7 +454,7 @@ export function HangarView({
         });
       }
     },
-    [],
+    [updateAddableCache],
   );
 
   const handleSaveLotPatch = useCallback(
@@ -462,6 +505,14 @@ export function HangarView({
           destinationIds: effectivePatch.destinationIds,
         });
         toast.dismiss(loadingId);
+        const cacheUpdate: Partial<LightLot> = {};
+        if (effectivePatch.statut !== undefined)
+          cacheUpdate.statut = effectivePatch.statut;
+        if (effectivePatch.emplacementIds !== undefined)
+          cacheUpdate.emplacementIds = effectivePatch.emplacementIds;
+        if (Object.keys(cacheUpdate).length > 0) {
+          updateAddableCache(lot.id, cacheUpdate);
+        }
         if (pendingCancel) {
           void undoLotPatch(lot, previous);
         } else {
@@ -491,7 +542,7 @@ export function HangarView({
         });
       }
     },
-    [undoLotPatch, setLocalLots],
+    [undoLotPatch, setLocalLots, updateAddableCache],
   );
 
   const placeUnplaced = useCallback(
@@ -514,6 +565,7 @@ export function HangarView({
       try {
         await patchLotEmplacements(lot.id, newIds);
         toast.dismiss(loadingId);
+        updateAddableCache(lot.id, { emplacementIds: newIds });
         if (pendingCancel) {
           void undoMove(lot, previousIds);
         } else {
@@ -534,7 +586,7 @@ export function HangarView({
         });
       }
     },
-    [applyLocalEmplacementsUpdate, undoMove],
+    [applyLocalEmplacementsUpdate, undoMove, updateAddableCache],
   );
 
   const handleDragEnd = useCallback(
@@ -590,6 +642,7 @@ export function HangarView({
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast.dismiss(loadingId);
+        updateAddableCache(ctx.lot.id, { emplacementIds: newIds });
         if (pendingCancel) {
           void undoMove(ctx.lot, previousIds);
         } else {
@@ -617,7 +670,7 @@ export function HangarView({
         });
       }
     },
-    [pendingMove, applyLocalEmplacementsUpdate, undoMove],
+    [pendingMove, applyLocalEmplacementsUpdate, undoMove, updateAddableCache],
   );
 
   const pendingAnalysis = useMemo(
