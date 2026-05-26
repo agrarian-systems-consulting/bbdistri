@@ -128,3 +128,286 @@
     @apply font-sans;
   }
 }
+
+/* ============================================================
+   Maquette Hangar — styles portés depuis docs/maquette_hangar_v1.html
+   Variables et classes custom pour le plan du hangar.
+   ============================================================ */
+
+:root {
+  --bg-page: #f5f1ea;
+  --hangar-wall: #6b5b4a;
+  --hangar-floor: #efe7da;
+  --passage: #e2dccf;
+  --zone-a-bg: #e3edf7;
+  --zone-b-bg: #f0eed5;
+  --zone-c-bg: #f7e0e0;
+  --zone-prep-bg: #e6f3e6;
+  --zone-tampon-bg: #ede0f5;
+  --allee-border: #b6a890;
+  --allee-header-bg: #d6cab1;
+  --allee-empty: #e8e3d7;
+  --card-bg: #ffffff;
+  --card-border: #cbc1ad;
+  --statut-trie: #4caf50;
+  --statut-brut: #ff9800;
+  --statut-nonaffecte: #9e9e9e;
+  --statut-triestocke: #2196f3;
+  --statut-aretrier: #d81b60;
+  --highlight: #fff176;
+  --highlight-border: #fbc02d;
+}
+
+body.hangar-bg {
+  background: var(--bg-page);
+  color: #222;
+}
+
+/* Topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: #2b2418;
+  color: #f5f1ea;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.topbar .subtitle {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  margin-left: 8px;
+}
+.legend {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  user-select: none;
+}
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Hangar conteneur */
+.hangar {
+  margin: 14px;
+  background: var(--hangar-floor);
+  border: 1px solid var(--allee-border);
+  border-radius: 4px;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.rang-haut {
+  display: grid;
+  grid-template-columns: 17fr 1fr 11fr;
+  gap: 4px;
+  padding: 4px;
+}
+.rang-haut.no-prep {
+  grid-template-columns: 1fr;
+}
+
+.rang-bas {
+  display: grid;
+  grid-template-columns: 15fr 5fr 20fr;
+  gap: 4px;
+  padding: 4px;
+}
+.rang-bas.no-tampon {
+  grid-template-columns: 15fr 20fr;
+}
+
+.allee-passage {
+  background: var(--passage);
+  border-top: 1px dashed var(--allee-border);
+  border-bottom: 1px dashed var(--allee-border);
+  padding: 12px 8px;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: #7a6a52;
+  letter-spacing: 0.05em;
+}
+.passage-vertical {
+  background: var(--passage);
+  border-left: 1px dashed var(--allee-border);
+  border-right: 1px dashed var(--allee-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: italic;
+  font-size: 0.65rem;
+  color: #7a6a52;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.1em;
+}
+
+/* Zone */
+.zone {
+  border-radius: 3px;
+  padding: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+.zone-A      { background: var(--zone-a-bg); }
+.zone-B      { background: var(--zone-b-bg); }
+.zone-C      { background: var(--zone-c-bg); }
+.zone-PREP   { background: var(--zone-prep-bg); }
+.zone-TAMPON { background: var(--zone-tampon-bg); }
+
+.zone-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-right: 1px solid var(--allee-border);
+  border-bottom: 1px solid var(--allee-border);
+  border-radius: 0 0 8px 0;
+  color: #4a3e29;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.allees {
+  display: grid;
+  gap: 2px;
+  padding: 34px 4px 4px 4px;
+  flex: 1;
+}
+.zone-A .allees { grid-template-columns: repeat(17, 1fr); }
+.zone-B .allees { grid-template-columns: repeat(20, 1fr); }
+.zone-C .allees { grid-template-columns: repeat(15, 1fr); }
+
+.zone-PREP .prep-content,
+.zone-TAMPON .prep-content {
+  flex: 1;
+  padding: 38px 6px 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 3px;
+  align-content: start;
+}
+.zone-TAMPON .prep-content {
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  padding: 38px 3px 3px;
+}
+.zone-PREP .lot,
+.zone-TAMPON .lot {
+  min-height: 38px;
+}
+
+/* Allée */
+.allee {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--allee-border);
+  border-radius: 3px;
+  min-height: 220px;
+  overflow: hidden;
+}
+.allee.vide {
+  background: var(--allee-empty);
+  opacity: 0.55;
+}
+.allee-header {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 2px 0;
+  background: var(--allee-header-bg);
+  color: #4a3e29;
+  letter-spacing: 0.04em;
+}
+.allee-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 2px;
+}
+
+/* Lot card */
+.lot {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left-width: 3px;
+  border-radius: 2px;
+  padding: 3px 4px;
+  font-size: 0.58rem;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+  position: relative;
+}
+.lot:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.lot.statut-Trie        { border-left-color: var(--statut-trie); }
+.lot.statut-Brut        { border-left-color: var(--statut-brut); }
+.lot.statut-Non-affecte { border-left-color: var(--statut-nonaffecte); }
+.lot.statut-Trie-stocke { border-left-color: var(--statut-triestocke); }
+.lot.statut-A-retrier   { border-left-color: var(--statut-aretrier); }
+.lot.statut-Epuise      { border-left-color: var(--statut-nonaffecte); }
+.lot-num {
+  font-weight: 700;
+  font-size: 0.62rem;
+  color: #2b2418;
+  word-break: break-all;
+  line-height: 1.15;
+}
+.lot-produit {
+  color: #555;
+  font-size: 0.56rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lot.highlight {
+  background: var(--highlight) !important;
+  border-color: var(--highlight-border) !important;
+  box-shadow: 0 0 0 2px var(--highlight-border);
+  z-index: 2;
+}
+
+.footer-note {
+  margin: 4px 18px 16px;
+  font-size: 0.72rem;
+  color: #7a6a52;
+  font-style: italic;
+}
+.footer-note strong {
+  color: #4a3e29;
+  font-style: normal;
+}
