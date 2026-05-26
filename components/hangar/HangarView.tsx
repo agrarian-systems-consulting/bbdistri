@@ -34,7 +34,6 @@ import {
 import { statutClass } from "@/lib/hangar/statut";
 import type {
   Emplacement,
-  LightLot,
   Lot,
   StatutTriage,
   Zone as ZoneType,
@@ -46,6 +45,8 @@ import { LotDetailModal, type LotPatch } from "./LotDetailModal";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { Topbar, type SidebarKind } from "./Topbar";
 import { UnplacedSidebar } from "./UnplacedSidebar";
+
+const LOTS_QUERY_KEY = ["lots", "hangar"] as const;
 
 type Props = {
   lots: Lot[];
@@ -90,7 +91,7 @@ async function patchLotEmplacements(
 }
 
 export function HangarView({
-  lots,
+  lots: initialLots,
   emplacements,
   caissonsById,
   destinationsById,
@@ -109,60 +110,62 @@ export function HangarView({
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [addingToEmpId, setAddingToEmpId] = useState<string | null>(null);
-  const [localLots, setLocalLots] = useState<Lot[]>(lots);
 
-  // Précharge en arrière-plan la liste légère des lots ajoutables (utilisée par
-  // AddLotModal). Rafraîchie toutes les 5 minutes pour suivre Airtable.
   const queryClient = useQueryClient();
-  /**
-   * Met à jour le cache TanStack Query ["lots", "addable"] de manière synchrone
-   * pour éviter qu'un lightLot stale provoque une collision sur la mutation suivante
-   * (ex: drag-drop fusion puis ajout d'une fraction trop vite après).
-   * Si le lot passe en statut Épuisé / Non affecté, on le retire du cache (cohérent
-   * avec le filtre côté API).
-   */
-  const updateAddableCache = useCallback(
-    (lotId: string, updates: Partial<LightLot>) => {
-      queryClient.setQueryData<LightLot[]>(["lots", "addable"], (old) => {
-        if (!old) return old;
-        if (
-          updates.statut === "Epuisé" ||
-          updates.statut === "Non affecté"
-        ) {
-          return old.filter((l) => l.id !== lotId);
-        }
-        return old.map((l) =>
-          l.id === lotId ? { ...l, ...updates } : l,
-        );
-      });
-    },
-    [queryClient],
-  );
 
-  const { data: addableLots } = useQuery({
-    queryKey: ["lots", "addable"],
+  // Source de vérité unique : tous les lots Hangar non-Épuisé.
+  // Init depuis le fetch server-side (initialData), refetch 5 min en arrière-plan
+  // pour suivre les modifs d'autres opérateurs ou les modifs directes Airtable.
+  const { data: lots = initialLots } = useQuery({
+    queryKey: LOTS_QUERY_KEY,
     queryFn: async () => {
-      const res = await fetch("/api/lots/all");
+      const res = await fetch("/api/lots");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { lots: LightLot[] };
+      const data = (await res.json()) as { lots: Lot[] };
       return data.lots;
     },
+    initialData: initialLots,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    setLocalLots(lots);
-  }, [lots]);
+  /**
+   * Patch le cache TanStack Query de manière synchrone (pas de refetch).
+   * Utilisé pour optimistic updates côté client après chaque mutation.
+   */
+  const updateLotInCache = useCallback(
+    (lotId: string, updates: Partial<Lot>) => {
+      queryClient.setQueryData<Lot[]>(LOTS_QUERY_KEY, (old) => {
+        if (!old) return old;
+        return old.map((l) => (l.id === lotId ? { ...l, ...updates } : l));
+      });
+    },
+    [queryClient],
+  );
+
+  const removeLotFromCache = useCallback(
+    (lotId: string) => {
+      queryClient.setQueryData<Lot[]>(LOTS_QUERY_KEY, (old) =>
+        old ? old.filter((l) => l.id !== lotId) : old,
+      );
+    },
+    [queryClient],
+  );
 
   const placedLots = useMemo(
-    () => localLots.filter((l) => l.emplacementIds.length > 0),
-    [localLots],
+    () => lots.filter((l) => l.emplacementIds.length > 0),
+    [lots],
   );
   const unplacedLots = useMemo(
-    () => localLots.filter((l) => l.emplacementIds.length === 0),
-    [localLots],
+    () => lots.filter((l) => l.emplacementIds.length === 0),
+    [lots],
+  );
+  // AddLotModal n'a pas vocation à proposer les "Non affecté" : l'utilisateur
+  // doit changer leur statut dans Airtable d'abord.
+  const addableLots = useMemo(
+    () => lots.filter((l) => l.statut !== "Non affecté"),
+    [lots],
   );
 
   const lotsParEmp = useMemo(
@@ -179,8 +182,8 @@ export function HangarView({
     return m;
   }, [emplacements]);
   const allotementGroups = useMemo(
-    () => computeAllotementGroups(localLots),
-    [localLots],
+    () => computeAllotementGroups(lots),
+    [lots],
   );
   const allotableLotIds = useMemo(() => {
     const set = new Set<string>();
@@ -191,16 +194,15 @@ export function HangarView({
   }, [allotementGroups]);
   const lotsById = useMemo(() => {
     const m = new Map<string, Lot>();
-    for (const lot of localLots) m.set(lot.id, lot);
+    for (const lot of lots) m.set(lot.id, lot);
     return m;
-  }, [localLots]);
+  }, [lots]);
 
   useEffect(() => {
     if (!fullscreenZone) return;
     document.body.classList.add("has-fullscreen");
     return () => document.body.classList.remove("has-fullscreen");
   }, [fullscreenZone]);
-
 
   useEffect(() => {
     if (openSidebar === "allotements") {
@@ -270,20 +272,9 @@ export function HangarView({
     document.body.classList.add("is-dragging");
   }, []);
 
-  const applyLocalEmplacementsUpdate = useCallback(
-    (lotId: string, newEmplacementIds: string[]) => {
-      setLocalLots((prev) =>
-        prev.map((l) =>
-          l.id === lotId ? { ...l, emplacementIds: newEmplacementIds } : l,
-        ),
-      );
-    },
-    [],
-  );
-
   const undoMove = useCallback(
     async (lot: Lot, previousIds: string[]) => {
-      applyLocalEmplacementsUpdate(lot.id, previousIds);
+      updateLotInCache(lot.id, { emplacementIds: previousIds });
       const loadingId = toast.loading(
         `Lot ${lot.nom} : annulation en cours…`,
       );
@@ -291,9 +282,6 @@ export function HangarView({
         await patchLotEmplacements(lot.id, previousIds);
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : déplacement annulé`);
-        updateAddableCache(lot.id, {
-          emplacementIds: previousIds,
-        });
       } catch (err) {
         toast.dismiss(loadingId);
         toast.error("Annulation échouée", {
@@ -301,7 +289,7 @@ export function HangarView({
         });
       }
     },
-    [applyLocalEmplacementsUpdate, updateAddableCache],
+    [updateLotInCache],
   );
 
   const handleLotClick = useCallback((lot: Lot) => {
@@ -313,45 +301,16 @@ export function HangarView({
   }, []);
 
   const handleAddLot = useCallback(
-    async (lightLot: LightLot, emp: Emplacement) => {
-      // La source de vérité fraîche est localLots (mise à jour optimistic après
-      // chaque mutation). lightLot peut venir d'un cache TanStack Query stale.
-      const freshLot = localLots.find((l) => l.id === lightLot.id);
-      const currentEmplacementIds = freshLot
-        ? freshLot.emplacementIds
-        : lightLot.emplacementIds;
-      if (currentEmplacementIds.includes(emp.id)) return;
-      const previousIds = [...currentEmplacementIds];
+    async (lot: Lot, emp: Emplacement) => {
+      if (lot.emplacementIds.includes(emp.id)) return;
+      const previousIds = [...lot.emplacementIds];
       const newIds = [...previousIds, emp.id];
 
-      const localLot = localLots.find((l) => l.id === lightLot.id);
-      if (localLot) {
-        applyLocalEmplacementsUpdate(lightLot.id, newIds);
-      } else {
-        // Lot pas encore dans localLots (par ex. lot hors Hangar). On crée une
-        // version minimale du Lot pour le state — les détails seront récupérés
-        // au prochain refresh.
-        setLocalLots((prev) => [
-          ...prev,
-          {
-            id: lightLot.id,
-            nom: lightLot.nom,
-            statut: lightLot.statut,
-            produit: lightLot.produit,
-            bioC2: null,
-            emplacementIds: newIds,
-            caissonIds: [],
-            destinationIds: [],
-            depotIds: [],
-            cleAllotement: null,
-            commentaire: null,
-          },
-        ]);
-      }
+      updateLotInCache(lot.id, { emplacementIds: newIds });
 
       let pendingCancel = false;
       const loadingId = toast.loading(
-        `Lot ${lightLot.nom} → ${emp.name} : synchronisation…`,
+        `Lot ${lot.nom} → ${emp.name} : synchronisation…`,
         {
           action: {
             label: "Annuler",
@@ -361,28 +320,13 @@ export function HangarView({
           },
         },
       );
-      const buildLotForUndo = (): Lot =>
-        localLots.find((l) => l.id === lightLot.id) ?? {
-          id: lightLot.id,
-          nom: lightLot.nom,
-          statut: lightLot.statut,
-          produit: lightLot.produit,
-          bioC2: null,
-          emplacementIds: newIds,
-          caissonIds: [],
-          destinationIds: [],
-          depotIds: [],
-          cleAllotement: null,
-          commentaire: null,
-        };
       try {
-        await patchLotEmplacements(lightLot.id, newIds);
+        await patchLotEmplacements(lot.id, newIds);
         toast.dismiss(loadingId);
-        updateAddableCache(lightLot.id, { emplacementIds: newIds });
         if (pendingCancel) {
-          void undoMove(buildLotForUndo(), previousIds);
+          void undoMove({ ...lot, emplacementIds: newIds }, previousIds);
         } else {
-          toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
+          toast(`Lot ${lot.nom} ajouté en ${emp.name}`, {
             className: "toast-undo",
             description:
               previousIds.length > 0
@@ -390,31 +334,26 @@ export function HangarView({
                 : "Placement initial",
             action: {
               label: "Annuler",
-              onClick: () => undoMove(buildLotForUndo(), previousIds),
+              onClick: () =>
+                undoMove({ ...lot, emplacementIds: newIds }, previousIds),
             },
             duration: 5000,
           });
         }
       } catch (err) {
-        if (localLot) {
-          applyLocalEmplacementsUpdate(lightLot.id, previousIds);
-        } else {
-          setLocalLots((prev) => prev.filter((l) => l.id !== lightLot.id));
-        }
+        updateLotInCache(lot.id, { emplacementIds: previousIds });
         toast.dismiss(loadingId);
         toast.error("Ajout échoué", {
           description: err instanceof Error ? err.message : String(err),
         });
       }
     },
-    [applyLocalEmplacementsUpdate, localLots, undoMove, updateAddableCache],
+    [undoMove, updateLotInCache],
   );
 
   const undoLotPatch = useCallback(
     async (lot: Lot, previous: Partial<Lot>) => {
-      setLocalLots((prev) =>
-        prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
-      );
+      updateLotInCache(lot.id, previous);
       const loadingId = toast.loading(
         `Lot ${lot.nom} : annulation en cours…`,
       );
@@ -440,13 +379,6 @@ export function HangarView({
         await patchLot(lot.id, payload);
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : modification annulée`);
-        const cacheUpdate: Partial<LightLot> = {};
-        if (previous.statut !== undefined) cacheUpdate.statut = previous.statut;
-        if (previous.emplacementIds !== undefined)
-          cacheUpdate.emplacementIds = previous.emplacementIds;
-        if (Object.keys(cacheUpdate).length > 0) {
-          updateAddableCache(lot.id, cacheUpdate);
-        }
       } catch (err) {
         toast.dismiss(loadingId);
         toast.error("Annulation échouée", {
@@ -454,7 +386,7 @@ export function HangarView({
         });
       }
     },
-    [updateAddableCache],
+    [updateLotInCache],
   );
 
   const handleSaveLotPatch = useCallback(
@@ -479,9 +411,8 @@ export function HangarView({
       if (effectivePatch.destinationIds !== undefined)
         previous.destinationIds = lot.destinationIds;
 
-      setLocalLots((prev) =>
-        prev.map((l) => (l.id === lot.id ? { ...l, ...effectivePatch } : l)),
-      );
+      updateLotInCache(lot.id, effectivePatch);
+
       let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${lot.nom} : synchronisation en cours…`,
@@ -505,14 +436,6 @@ export function HangarView({
           destinationIds: effectivePatch.destinationIds,
         });
         toast.dismiss(loadingId);
-        const cacheUpdate: Partial<LightLot> = {};
-        if (effectivePatch.statut !== undefined)
-          cacheUpdate.statut = effectivePatch.statut;
-        if (effectivePatch.emplacementIds !== undefined)
-          cacheUpdate.emplacementIds = effectivePatch.emplacementIds;
-        if (Object.keys(cacheUpdate).length > 0) {
-          updateAddableCache(lot.id, cacheUpdate);
-        }
         if (pendingCancel) {
           void undoLotPatch(lot, previous);
         } else {
@@ -533,23 +456,21 @@ export function HangarView({
           });
         }
       } catch (err) {
-        setLocalLots((prev) =>
-          prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
-        );
+        updateLotInCache(lot.id, previous);
         toast.dismiss(loadingId);
         toast.error("Modification échouée", {
           description: err instanceof Error ? err.message : String(err),
         });
       }
     },
-    [undoLotPatch, setLocalLots, updateAddableCache],
+    [undoLotPatch, updateLotInCache],
   );
 
   const placeUnplaced = useCallback(
     async (lot: Lot, destEmp: Emplacement) => {
       const previousIds = [...lot.emplacementIds];
       const newIds = [destEmp.id];
-      applyLocalEmplacementsUpdate(lot.id, newIds);
+      updateLotInCache(lot.id, { emplacementIds: newIds });
       let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${lot.nom} → ${destEmp.name} : synchronisation…`,
@@ -565,7 +486,6 @@ export function HangarView({
       try {
         await patchLotEmplacements(lot.id, newIds);
         toast.dismiss(loadingId);
-        updateAddableCache(lot.id, { emplacementIds: newIds });
         if (pendingCancel) {
           void undoMove(lot, previousIds);
         } else {
@@ -579,14 +499,14 @@ export function HangarView({
           });
         }
       } catch (err) {
-        applyLocalEmplacementsUpdate(lot.id, previousIds);
+        updateLotInCache(lot.id, { emplacementIds: previousIds });
         toast.dismiss(loadingId);
         toast.error("Placement échoué", {
           description: err instanceof Error ? err.message : String(err),
         });
       }
     },
-    [applyLocalEmplacementsUpdate, undoMove, updateAddableCache],
+    [undoMove, updateLotInCache],
   );
 
   const handleDragEnd = useCallback(
@@ -625,7 +545,7 @@ export function HangarView({
       const previousIds = [...ctx.lot.emplacementIds];
       const newIds = computeNewEmplacementIds(ctx, action);
 
-      applyLocalEmplacementsUpdate(ctx.lot.id, newIds);
+      updateLotInCache(ctx.lot.id, { emplacementIds: newIds });
       let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${ctx.lot.nom} → ${ctx.destEmp.name} : synchronisation…`,
@@ -642,7 +562,6 @@ export function HangarView({
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast.dismiss(loadingId);
-        updateAddableCache(ctx.lot.id, { emplacementIds: newIds });
         if (pendingCancel) {
           void undoMove(ctx.lot, previousIds);
         } else {
@@ -663,15 +582,19 @@ export function HangarView({
           });
         }
       } catch (err) {
-        applyLocalEmplacementsUpdate(ctx.lot.id, previousIds);
+        updateLotInCache(ctx.lot.id, { emplacementIds: previousIds });
         toast.dismiss(loadingId);
         toast.error("Déplacement échoué", {
           description: err instanceof Error ? err.message : String(err),
         });
       }
     },
-    [pendingMove, applyLocalEmplacementsUpdate, undoMove, updateAddableCache],
+    [pendingMove, undoMove, updateLotInCache],
   );
+
+  // Cleanup d'un éventuel removeLotFromCache si erreur fatale dans une mutation
+  // (reste exposé pour les besoins futurs ; sinon TS warn unused).
+  void removeLotFromCache;
 
   const pendingAnalysis = useMemo(
     () => (pendingMove ? analyzeMove(pendingMove) : null),
@@ -688,7 +611,7 @@ export function HangarView({
       onDragEnd={handleDragEnd}
     >
       <Topbar
-        totalLots={localLots.length}
+        totalLots={lots.length}
         totalEmplacements={emplacements.length}
         unplacedCount={unplacedLots.length}
         activeStatuts={activeStatuts}
@@ -750,7 +673,7 @@ export function HangarView({
       <AddLotModal
         emplacement={addingToEmpId ? (empsById.get(addingToEmpId) ?? null) : null}
         emplacementsById={empsById}
-        addableLots={addableLots ?? null}
+        addableLots={addableLots}
         onClose={() => setAddingToEmpId(null)}
         onAdd={handleAddLot}
       />

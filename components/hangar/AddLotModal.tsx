@@ -13,15 +13,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { statutClass } from "@/lib/hangar/statut";
-import type { Emplacement, LightLot } from "@/lib/types/domain";
+import type { Emplacement, Lot } from "@/lib/types/domain";
 
 type Props = {
   emplacement: Emplacement | null;
   emplacementsById: Map<string, Emplacement>;
-  /** Liste préchargée et auto-refetched par HangarView via TanStack Query. */
-  addableLots: LightLot[] | null;
+  /** Lots éligibles (= hors Épuisé et hors Non affecté) venant du state HangarView. */
+  addableLots: Lot[];
   onClose: () => void;
-  onAdd: (lot: LightLot, emplacement: Emplacement) => Promise<void>;
+  onAdd: (lot: Lot, emplacement: Emplacement) => Promise<void>;
 };
 
 function StatutChip({ statut }: { statut: string }) {
@@ -59,7 +59,6 @@ export function AddLotModal({
   }, [emplacement]);
 
   const options = useMemo<ComboboxOption[]>(() => {
-    if (!addableLots) return [];
     return addableLots
       .slice()
       .sort((a, b) => a.nom.localeCompare(b.nom))
@@ -71,7 +70,7 @@ export function AddLotModal({
   }, [addableLots]);
 
   const selectedLot = useMemo(
-    () => addableLots?.find((l) => l.id === selectedLotId) ?? null,
+    () => addableLots.find((l) => l.id === selectedLotId) ?? null,
     [addableLots, selectedLotId],
   );
 
@@ -124,12 +123,7 @@ export function AddLotModal({
               options={options}
               value={selectedLotId}
               onChange={setSelectedLotId}
-              placeholder={
-                addableLots === null
-                  ? "Chargement…"
-                  : `Rechercher parmi ${addableLots.length} lots…`
-              }
-              disabled={addableLots === null}
+              placeholder={`Rechercher parmi ${addableLots.length} lots…`}
             />
             <p className="text-xs text-stone-500">
               Les lots au statut <em>Épuisé</em> ou <em>Non affecté</em>{" "}
