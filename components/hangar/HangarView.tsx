@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   parseDraggableLotId,
   parseDroppableEmplacementId,
+  UNPLACED_SOURCE,
 } from "@/lib/hangar/dnd-ids";
 import { computeAllotementGroups } from "@/lib/hangar/filters";
 import {
@@ -37,7 +38,8 @@ import type {
 import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
 import { MoveConfirmModal } from "./MoveConfirmModal";
-import { Topbar } from "./Topbar";
+import { Topbar, type SidebarKind } from "./Topbar";
+import { UnplacedSidebar } from "./UnplacedSidebar";
 
 type Props = {
   lots: Lot[];
@@ -73,7 +75,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     () => new Set(),
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [allotementMode, setAllotementMode] = useState(false);
+  const [openSidebar, setOpenSidebar] = useState<SidebarKind | null>(null);
   const [allotementHoveredKey, setAllotementHoveredKey] = useState<
     string | null
   >(null);
@@ -85,9 +87,18 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     setLocalLots(lots);
   }, [lots]);
 
-  const lotsParEmp = useMemo(
-    () => groupLotsByEmplacement(localLots),
+  const placedLots = useMemo(
+    () => localLots.filter((l) => l.emplacementIds.length > 0),
     [localLots],
+  );
+  const unplacedLots = useMemo(
+    () => localLots.filter((l) => l.emplacementIds.length === 0),
+    [localLots],
+  );
+
+  const lotsParEmp = useMemo(
+    () => groupLotsByEmplacement(placedLots),
+    [placedLots],
   );
   const empsParZone = useMemo(
     () => groupEmplacementsByZone(emplacements),
@@ -122,10 +133,19 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   }, [fullscreenZone]);
 
   useEffect(() => {
-    if (!allotementMode) return;
-    document.body.classList.add("allotement-on");
-    return () => document.body.classList.remove("allotement-on");
-  }, [allotementMode]);
+    if (openSidebar === "allotements") {
+      document.body.classList.add("allotement-on");
+      return () => document.body.classList.remove("allotement-on");
+    }
+    if (openSidebar === "unplaced") {
+      document.body.classList.add("unplaced-on");
+      return () => document.body.classList.remove("unplaced-on");
+    }
+  }, [openSidebar]);
+
+  useEffect(() => {
+    if (openSidebar !== "allotements") setAllotementHoveredKey(null);
+  }, [openSidebar]);
 
   useEffect(() => {
     if (!fullscreenZone) return;
@@ -149,12 +169,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     });
   }, []);
 
-  const toggleAllotement = useCallback(() => {
-    setAllotementMode((v) => {
-      const next = !v;
-      if (!next) setAllotementHoveredKey(null);
-      return next;
-    });
+  const toggleSidebar = useCallback((kind: SidebarKind) => {
+    setOpenSidebar((current) => (current === kind ? null : kind));
   }, []);
 
   const sensors = useSensors(
@@ -169,26 +185,6 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     const parsed = parseDraggableLotId(String(event.active.id));
     if (parsed) setActiveDragLotId(parsed.lotId);
   }, []);
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      setActiveDragLotId(null);
-      const { active, over } = event;
-      if (!over) return;
-      const src = parseDraggableLotId(String(active.id));
-      const dst = parseDroppableEmplacementId(String(over.id));
-      if (!src || !dst) return;
-      if (src.emplacementId === dst) return;
-
-      const lot = lotsById.get(src.lotId);
-      const sourceEmp = empsById.get(src.emplacementId);
-      const destEmp = empsById.get(dst);
-      if (!lot || !sourceEmp || !destEmp) return;
-
-      setPendingMove({ lot, sourceEmp, destEmp });
-    },
-    [empsById, lotsById],
-  );
 
   const applyLocalEmplacementsUpdate = useCallback(
     (lotId: string, newEmplacementIds: string[]) => {
@@ -214,6 +210,56 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
       }
     },
     [applyLocalEmplacementsUpdate],
+  );
+
+  const placeUnplaced = useCallback(
+    async (lot: Lot, destEmp: Emplacement) => {
+      const previousIds = [...lot.emplacementIds];
+      const newIds = [destEmp.id];
+      applyLocalEmplacementsUpdate(lot.id, newIds);
+      try {
+        await patchLotEmplacements(lot.id, newIds);
+        toast(`Lot ${lot.nom} placé en ${destEmp.name}`, {
+          action: {
+            label: "Annuler",
+            onClick: () => undoMove(lot, previousIds),
+          },
+          duration: 5000,
+        });
+      } catch (err) {
+        applyLocalEmplacementsUpdate(lot.id, previousIds);
+        toast.error("Placement échoué", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [applyLocalEmplacementsUpdate, undoMove],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDragLotId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const src = parseDraggableLotId(String(active.id));
+      const dst = parseDroppableEmplacementId(String(over.id));
+      if (!src || !dst) return;
+      if (src.emplacementId === dst) return;
+
+      const lot = lotsById.get(src.lotId);
+      const destEmp = empsById.get(dst);
+      if (!lot || !destEmp) return;
+
+      if (src.emplacementId === UNPLACED_SOURCE) {
+        void placeUnplaced(lot, destEmp);
+        return;
+      }
+
+      const sourceEmp = empsById.get(src.emplacementId);
+      if (!sourceEmp) return;
+      setPendingMove({ lot, sourceEmp, destEmp });
+    },
+    [empsById, lotsById, placeUnplaced],
   );
 
   const handleConfirm = useCallback(
@@ -269,12 +315,13 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
       <Topbar
         totalLots={localLots.length}
         totalEmplacements={emplacements.length}
+        unplacedCount={unplacedLots.length}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
-        allotementMode={allotementMode}
+        openSidebar={openSidebar}
         onToggleStatut={toggleStatut}
         onSearchChange={setSearchQuery}
-        onToggleAllotement={toggleAllotement}
+        onToggleSidebar={toggleSidebar}
       />
       <HangarPlan
         empsParZone={empsParZone}
@@ -293,14 +340,20 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
         <em>Hangar</em> filtrés en amont.
       </p>
-      {allotementMode ? (
+      {openSidebar === "allotements" ? (
         <AllotementSidebar
           groups={allotementGroups}
           lotsById={lotsById}
           emplacementsById={empsById}
           hoveredKey={allotementHoveredKey}
           onHoverKey={setAllotementHoveredKey}
-          onClose={toggleAllotement}
+          onClose={() => setOpenSidebar(null)}
+        />
+      ) : null}
+      {openSidebar === "unplaced" ? (
+        <UnplacedSidebar
+          lots={unplacedLots}
+          onClose={() => setOpenSidebar(null)}
         />
       ) : null}
       <MoveConfirmModal

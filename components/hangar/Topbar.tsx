@@ -2,15 +2,18 @@
 
 import type { StatutTriage } from "@/lib/types/domain";
 
+export type SidebarKind = "allotements" | "unplaced";
+
 type Props = {
   totalLots: number;
   totalEmplacements: number;
+  unplacedCount: number;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
-  allotementMode: boolean;
+  openSidebar: SidebarKind | null;
   onToggleStatut: (statut: StatutTriage) => void;
   onSearchChange: (query: string) => void;
-  onToggleAllotement: () => void;
+  onToggleSidebar: (kind: SidebarKind) => void;
 };
 
 const LEGEND_STATUTS: Array<{
@@ -31,12 +34,13 @@ const LEGEND_STATUTS: Array<{
 export function Topbar({
   totalLots,
   totalEmplacements,
+  unplacedCount,
   activeStatuts,
   searchQuery,
-  allotementMode,
+  openSidebar,
   onToggleStatut,
   onSearchChange,
-  onToggleAllotement,
+  onToggleSidebar,
 }: Props) {
   const noFilter = activeStatuts.size === 0;
   return (
@@ -77,9 +81,21 @@ export function Topbar({
         </div>
         <button
           type="button"
-          className={`allotement-toggle ${allotementMode ? "active" : ""}`}
-          onClick={onToggleAllotement}
-          aria-pressed={allotementMode}
+          className={`topbar-pill ${openSidebar === "unplaced" ? "active" : ""}`}
+          onClick={() => onToggleSidebar("unplaced")}
+          aria-pressed={openSidebar === "unplaced"}
+          title="Lots du Hangar sans emplacement défini"
+        >
+          <span>À placer</span>
+          {unplacedCount > 0 ? (
+            <span className="topbar-pill-badge">{unplacedCount}</span>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          className={`allotement-toggle ${openSidebar === "allotements" ? "active" : ""}`}
+          onClick={() => onToggleSidebar("allotements")}
+          aria-pressed={openSidebar === "allotements"}
           title="Suggestions d'allotements — regrouper les lots compatibles"
         >
           <svg

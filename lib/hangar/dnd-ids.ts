@@ -1,7 +1,10 @@
 /**
  * Encodage/décodage des IDs draggables et droppables pour @dnd-kit.
  * Un lot multi-emplacement génère une draggable par portion → l'ID inclut l'emplacement source.
+ * Les lots sans emplacement (sidebar "À placer") utilisent UNPLACED_SOURCE comme source.
  */
+
+export const UNPLACED_SOURCE = "unplaced";
 
 export function draggableLotId(emplacementId: string, lotId: string): string {
   return `lot|${emplacementId}|${lotId}`;
