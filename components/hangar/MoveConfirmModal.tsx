@@ -59,13 +59,8 @@ export function MoveConfirmModal({ analysis, onConfirm, onCancel }: Props) {
                   {analysis.lot.nom}
                 </span>{" "}
                 de{" "}
-                <span className="font-mono">
-                  {analysis.sourceEmp.allee ?? analysis.sourceEmp.name}
-                </span>{" "}
-                vers{" "}
-                <span className="font-mono">
-                  {analysis.destEmp.allee ?? analysis.destEmp.name}
-                </span>
+                <span className="font-mono">{analysis.sourceEmp.name}</span>{" "}
+                vers <span className="font-mono">{analysis.destEmp.name}</span>
                 {analysis.isMultiEmplacement
                   ? ` · lot présent sur ${analysis.lot.emplacementIds.length} emplacements`
                   : ""}

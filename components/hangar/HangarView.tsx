@@ -230,9 +230,13 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast(`Lot ${ctx.lot.nom} déplacé`, {
-          description: `${ctx.sourceEmp.allee ?? ctx.sourceEmp.name} → ${
-            ctx.destEmp.allee ?? ctx.destEmp.name
-          }${action === "regroup-all" ? " (regroupement total)" : action === "merge" ? " (fusion)" : ""}`,
+          description: `${ctx.sourceEmp.name} → ${ctx.destEmp.name}${
+            action === "regroup-all"
+              ? " (regroupement total)"
+              : action === "merge"
+                ? " (fusion)"
+                : ""
+          }`,
           action: {
             label: "Annuler",
             onClick: () => undoMove(ctx.lot, previousIds),
