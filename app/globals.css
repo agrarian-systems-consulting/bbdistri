@@ -824,6 +824,40 @@ body.unplaced-on .footer-note {
   outline: 2px dashed #2e7d32;
   outline-offset: -2px;
 }
+
+/* Placeholder "+" pour ajouter un lot existant à un emplacement (visible au hover) */
+.lot-add-placeholder {
+  border: 1.5px dashed #c8b88f;
+  border-radius: 3px;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b7d65;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s,
+    color 0.15s;
+  background: transparent;
+  user-select: none;
+  font-family: inherit;
+}
+.allee:hover .lot-add-placeholder,
+.prep-content:hover .lot-add-placeholder {
+  opacity: 0.6;
+}
+.lot-add-placeholder:hover {
+  opacity: 1 !important;
+  background: rgba(76, 175, 80, 0.1);
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+.zone.fullscreen .lot-add-placeholder {
+  min-height: 36px;
+  font-size: 1.4rem;
+}
 .lot:hover {
   transform: translateY(-1px);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);

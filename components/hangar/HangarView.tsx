@@ -37,6 +37,7 @@ import type {
   StatutTriage,
   Zone as ZoneType,
 } from "@/lib/types/domain";
+import { AddLotModal } from "./AddLotModal";
 import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
 import { LotDetailModal, type LotPatch } from "./LotDetailModal";
@@ -105,6 +106,7 @@ export function HangarView({
   const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
+  const [addingToEmpId, setAddingToEmpId] = useState<string | null>(null);
   const [localLots, setLocalLots] = useState<Lot[]>(lots);
 
   useEffect(() => {
@@ -252,6 +254,50 @@ export function HangarView({
   const handleLotClick = useCallback((lot: Lot) => {
     setEditingLotId(lot.id);
   }, []);
+
+  const handleAddLotClick = useCallback((emp: Emplacement) => {
+    setAddingToEmpId(emp.id);
+  }, []);
+
+  const handleAddLot = useCallback(
+    async (lot: Lot, emp: Emplacement) => {
+      if (lot.emplacementIds.includes(emp.id)) return;
+      const previousIds = [...lot.emplacementIds];
+      const newIds = [...previousIds, emp.id];
+
+      const lotKnownLocally = localLots.some((l) => l.id === lot.id);
+      if (lotKnownLocally) {
+        applyLocalEmplacementsUpdate(lot.id, newIds);
+      } else {
+        setLocalLots((prev) => [...prev, { ...lot, emplacementIds: newIds }]);
+      }
+
+      try {
+        await patchLotEmplacements(lot.id, newIds);
+        toast(`Lot ${lot.nom} ajouté en ${emp.name}`, {
+          description:
+            previousIds.length > 0
+              ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
+              : "Placement initial",
+          action: {
+            label: "Annuler",
+            onClick: () => undoMove({ ...lot, emplacementIds: newIds }, previousIds),
+          },
+          duration: 5000,
+        });
+      } catch (err) {
+        if (lotKnownLocally) {
+          applyLocalEmplacementsUpdate(lot.id, previousIds);
+        } else {
+          setLocalLots((prev) => prev.filter((l) => l.id !== lot.id));
+        }
+        toast.error("Ajout échoué", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [applyLocalEmplacementsUpdate, localLots, undoMove],
+  );
 
   const undoLotPatch = useCallback(
     async (lot: Lot, previous: Partial<Lot>) => {
@@ -462,6 +508,7 @@ export function HangarView({
         onToggleFullscreen={toggleFullscreen}
         onHoverChange={setHoveredLotId}
         onLotClick={handleLotClick}
+        onAddLotClick={handleAddLotClick}
       />
       <p className="footer-note">
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
@@ -496,6 +543,13 @@ export function HangarView({
         destinationsById={destinationsById}
         onClose={() => setEditingLotId(null)}
         onSave={handleSaveLotPatch}
+      />
+      <AddLotModal
+        emplacement={addingToEmpId ? (empsById.get(addingToEmpId) ?? null) : null}
+        emplacementsById={empsById}
+        caissonsById={caissonsById}
+        onClose={() => setAddingToEmpId(null)}
+        onAdd={handleAddLot}
       />
       <DragOverlay dropAnimation={null} style={{ pointerEvents: "none" }}>
         {activeDragLot ? (

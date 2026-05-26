@@ -34,6 +34,7 @@ type Props = {
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
   onLotClick: (lot: Lot) => void;
+  onAddLotClick: (emplacement: Emplacement) => void;
 };
 
 function VracDropZone({
@@ -47,6 +48,7 @@ function VracDropZone({
   allotementHoveredKey,
   onHoverChange,
   onLotClick,
+  onAddLotClick,
 }: {
   emplacement: Emplacement;
   lots: Lot[];
@@ -58,6 +60,7 @@ function VracDropZone({
   allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
   onLotClick: (lot: Lot) => void;
+  onAddLotClick: (emplacement: Emplacement) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableEmplacementId(emplacement.id),
@@ -87,6 +90,15 @@ function VracDropZone({
           onLotClick={onLotClick}
         />
       ))}
+      <button
+        type="button"
+        className="lot-add-placeholder"
+        onClick={() => onAddLotClick(emplacement)}
+        title={`Ajouter un lot existant en ${emplacement.name}`}
+        aria-label={`Ajouter un lot existant en ${emplacement.name}`}
+      >
+        +
+      </button>
     </div>
   );
 }
@@ -109,6 +121,7 @@ export function Zone(props: Props) {
     allotementHoveredKey: props.allotementHoveredKey,
     onHoverChange: props.onHoverChange,
     onLotClick: props.onLotClick,
+    onAddLotClick: props.onAddLotClick,
   };
 
   return (

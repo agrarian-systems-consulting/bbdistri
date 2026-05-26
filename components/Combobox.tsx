@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 export type ComboboxOption = {
   value: string;
   label: string;
   parts?: string[];
+  /** Contenu rendu à droite de chaque option (ex: chip statut). Non utilisé pour la recherche. */
+  right?: ReactNode;
 };
 
 type Props = {
@@ -158,7 +166,7 @@ export function Combobox({
                     : "text-gray-700 hover:bg-gray-50"
               }`}
             >
-              <span>
+              <span className="flex-1 min-w-0 truncate">
                 {option.parts ? (
                   option.parts.map((part, pi) => (
                     <span key={pi}>
@@ -184,21 +192,24 @@ export function Combobox({
                   option.label
                 )}
               </span>
-              {isSelected && (
-                <svg
-                  className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-amber-600"}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {option.right}
+                {isSelected && (
+                  <svg
+                    className={`w-4 h-4 ${isActive ? "text-white" : "text-amber-600"}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+              </div>
             </li>
           );
         })

@@ -17,6 +17,7 @@ type Props = {
   allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
   onLotClick: (lot: Lot) => void;
+  onAddLotClick: (emplacement: Emplacement) => void;
 };
 
 export function Allee({
@@ -30,6 +31,7 @@ export function Allee({
   allotementHoveredKey,
   onHoverChange,
   onLotClick,
+  onAddLotClick,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableEmplacementId(emplacement.id),
@@ -66,6 +68,15 @@ export function Allee({
             onLotClick={onLotClick}
           />
         ))}
+        <button
+          type="button"
+          className="lot-add-placeholder"
+          onClick={() => onAddLotClick(emplacement)}
+          title={`Ajouter un lot existant en ${emplacement.name}`}
+          aria-label={`Ajouter un lot existant en ${emplacement.name}`}
+        >
+          +
+        </button>
       </div>
     </div>
   );
