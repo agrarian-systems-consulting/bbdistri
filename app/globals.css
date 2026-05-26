@@ -309,68 +309,75 @@ body.allotement-on .lot.allotable::after {
   line-height: 1;
 }
 
-/* Décale le hangar quand la sidebar des allotements est ouverte */
+/* Décale le hangar quand une sidebar est ouverte */
 body.allotement-on .hangar,
-body.allotement-on .footer-note {
-  margin-right: 340px;
+body.allotement-on .footer-note,
+body.unplaced-on .hangar,
+body.unplaced-on .footer-note {
+  margin-right: 440px;
 }
 
-/* Sidebar des allotements possibles */
-.allotement-sidebar {
+/* Sidebars latérales (neutres) — partagent les styles de base */
+.side-panel {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
-  background: #fffbf0;
-  border-left: 2px solid #f59e0b;
+  width: 420px;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
   overflow-y: auto;
   z-index: 9000;
-  padding: 14px 12px 18px;
-  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.1);
+  padding: 16px 14px 20px;
+  box-shadow: -6px 0 16px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.allotement-sidebar-header {
+.side-panel-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
 }
-.allotement-sidebar-header h2 {
+.side-panel-header h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #92400e;
+  color: #1a140c;
 }
-.allotement-sidebar-header p {
+.side-panel-header p {
   margin: 2px 0 0;
-  font-size: 0.7rem;
-  color: #92400e;
-  opacity: 0.7;
+  font-size: 0.72rem;
+  color: #6b7280;
 }
-.allotement-sidebar-close {
+.side-panel-close {
   background: transparent;
   border: 1px solid transparent;
-  color: #92400e;
-  width: 26px;
-  height: 26px;
+  color: #6b7280;
+  width: 28px;
+  height: 28px;
   border-radius: 4px;
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
   font-family: inherit;
 }
-.allotement-sidebar-close:hover {
-  background: rgba(146, 64, 14, 0.1);
+.side-panel-close:hover {
+  background: #f3f4f6;
+  color: #1a140c;
 }
-.allotement-sidebar-empty {
+.side-panel-empty {
   font-size: 0.78rem;
-  color: #92400e;
+  color: #6b7280;
   font-style: italic;
   margin: 0;
 }
+
+/* Alias pour rétro-compat */
+.allotement-sidebar { /* hérite via class side-panel posée en plus */ }
 /* Accordéon des groupes d'allotement */
 .allotement-accordion {
   display: flex;
@@ -378,18 +385,18 @@ body.allotement-on .footer-note {
   gap: 4px;
 }
 .allotement-item {
-  border-radius: 4px;
-  border: 1px solid transparent;
-  background: rgba(245, 158, 11, 0.06);
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
   transition: background 0.12s, border-color 0.12s;
 }
 .allotement-item.active,
 .allotement-item:hover {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: #f59e0b;
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 .allotement-trigger {
-  padding: 8px 10px !important;
+  padding: 10px 12px !important;
   cursor: pointer;
   width: 100%;
 }
@@ -398,14 +405,28 @@ body.allotement-on .footer-note {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  min-width: 0;
+}
+.allotement-trigger-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   min-width: 0;
 }
 .allotement-trigger-code {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #1a140c;
-  letter-spacing: 0.02em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono), monospace;
+}
+.allotement-trigger-libelle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.25;
+  word-break: break-word;
 }
 .allotement-trigger-badges {
   display: flex;
@@ -414,31 +435,38 @@ body.allotement-on .footer-note {
 }
 .badge-lots,
 .badge-statut {
-  font-size: 0.62rem;
-  padding: 1px 7px;
-  border-radius: 8px;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.4;
   white-space: nowrap;
 }
 .badge-lots {
-  background: #92400e;
-  color: #fffbf0;
+  background: #1f2937;
+  color: #ffffff;
 }
 .badge-statut {
-  background: rgba(146, 64, 14, 0.15);
-  color: #92400e;
-  border: 1px solid rgba(146, 64, 14, 0.3);
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
 }
+.badge-statut.statut-Trie  { border-color: var(--statut-trie); color: #166534; }
+.badge-statut.statut-Brut  { border-color: var(--statut-brut); color: #9a3412; }
+.badge-statut.statut-A-retrier { border-color: var(--statut-aretrier); color: #9f1239; }
+.badge-statut.statut-Trie-stocke { border-color: var(--statut-triestocke); color: #1e40af; }
 .allotement-content {
-  padding: 0 10px 10px !important;
+  padding: 0 12px 12px !important;
 }
-.allotement-libelle {
-  font-size: 0.7rem;
-  color: #4a3e29;
-  font-style: italic;
-  margin-bottom: 6px;
+.allotement-destination {
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-bottom: 8px;
   word-break: break-word;
+}
+.allotement-destination strong {
+  color: #374151;
+  font-weight: 600;
 }
 .allotement-lots-list {
   list-style: none;
@@ -450,18 +478,19 @@ body.allotement-on .footer-note {
 }
 .allotement-lot-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 3px;
+  padding: 6px 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
 }
 .allotement-lot-nom {
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #1a140c;
+  color: #111827;
   word-break: break-all;
 }
 .allotement-lot-empls {
@@ -471,18 +500,19 @@ body.allotement-on .footer-note {
   justify-content: flex-end;
 }
 .emp-badge {
-  font-size: 0.62rem;
-  padding: 1px 6px;
-  background: #2b2418;
-  color: #f5f1ea;
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  background: #1f2937;
+  color: #f9fafb;
   border-radius: 8px;
   white-space: nowrap;
   font-family: var(--font-mono), monospace;
+  font-weight: 600;
 }
 .emp-badge-empty {
   background: transparent;
-  color: #8b7d65;
-  border: 1px dashed #b6a890;
+  color: #9ca3af;
+  border: 1px dashed #d1d5db;
 }
 
 /* Hangar conteneur */

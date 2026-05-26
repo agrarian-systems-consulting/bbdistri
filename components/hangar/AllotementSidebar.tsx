@@ -8,7 +8,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { parseAllotementKey } from "@/lib/hangar/filters";
-import type { Emplacement, Lot } from "@/lib/types/domain";
+import { statutClass } from "@/lib/hangar/statut";
+import type { Emplacement, Lot, StatutTriage } from "@/lib/types/domain";
 
 type Props = {
   groups: Map<string, string[]>;
@@ -19,10 +20,29 @@ type Props = {
   onClose: () => void;
 };
 
-function parseLabel(cle: string): { code: string; libelle: string } {
-  const match = cle.match(/^(ART\d+)\s*-\s*(.+)$/);
-  if (!match) return { code: "", libelle: cle };
-  return { code: match[1], libelle: match[2].replace(/-$/, "") };
+/**
+ * Parse "ART0205 - Ecart de triage protéagineux bio-Alimentation animale"
+ * en { code, libelle, destination } selon le format Airtable
+ *   "CODE - Libellé-Destination" (destination peut être vide).
+ */
+function parseLabel(cle: string): {
+  code: string;
+  libelle: string;
+  destination: string;
+} {
+  const sepCode = cle.indexOf(" - ");
+  if (sepCode === -1) {
+    return { code: "", libelle: cle, destination: "" };
+  }
+  const code = cle.slice(0, sepCode).trim();
+  const reste = cle.slice(sepCode + 3);
+  const sepDest = reste.lastIndexOf("-");
+  if (sepDest === -1) return { code, libelle: reste.trim(), destination: "" };
+  return {
+    code,
+    libelle: reste.slice(0, sepDest).trim(),
+    destination: reste.slice(sepDest + 1).trim(),
+  };
 }
 
 export function AllotementSidebar({
@@ -41,8 +61,8 @@ export function AllotementSidebar({
   const totalLots = sorted.reduce((acc, [, ids]) => acc + ids.length, 0);
 
   return (
-    <aside className="allotement-sidebar">
-      <header className="allotement-sidebar-header">
+    <aside className="side-panel allotement-sidebar">
+      <header className="side-panel-header">
         <div>
           <h2>Allotements possibles</h2>
           <p>
@@ -53,22 +73,23 @@ export function AllotementSidebar({
           type="button"
           onClick={onClose}
           aria-label="Fermer la liste des allotements"
-          className="allotement-sidebar-close"
+          className="side-panel-close"
         >
           ×
         </button>
       </header>
 
       {sorted.length === 0 ? (
-        <p className="allotement-sidebar-empty">
+        <p className="side-panel-empty">
           Aucun groupe d&apos;allotement parmi les lots placés.
         </p>
       ) : (
         <Accordion className="allotement-accordion">
           {sorted.map(([key, lotIds]) => {
             const { cle, statut } = parseAllotementKey(key);
-            const { code, libelle } = parseLabel(cle);
+            const { code, libelle, destination } = parseLabel(cle);
             const active = hoveredKey === key;
+            const statutKlass = statutClass(statut as StatutTriage);
             return (
               <AccordionItem
                 key={key}
@@ -79,18 +100,27 @@ export function AllotementSidebar({
               >
                 <AccordionTrigger className="allotement-trigger">
                   <div className="allotement-trigger-inner">
-                    <div className="allotement-trigger-code">
-                      {code || libelle}
+                    <div className="allotement-trigger-title">
+                      {code ? (
+                        <span className="allotement-trigger-code">{code}</span>
+                      ) : null}
+                      <span className="allotement-trigger-libelle">
+                        {libelle}
+                      </span>
                     </div>
                     <div className="allotement-trigger-badges">
                       <span className="badge-lots">{lotIds.length} lots</span>
-                      <span className="badge-statut">{statut}</span>
+                      <span className={`badge-statut ${statutKlass}`}>
+                        {statut}
+                      </span>
                     </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="allotement-content">
-                  {code ? (
-                    <div className="allotement-libelle">{libelle}</div>
+                  {destination ? (
+                    <div className="allotement-destination">
+                      Destination : <strong>{destination}</strong>
+                    </div>
                   ) : null}
                   <ul className="allotement-lots-list">
                     {lotIds.map((lotId) => {
