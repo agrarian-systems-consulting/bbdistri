@@ -484,7 +484,9 @@ export function HangarView({
       <DragOverlay dropAnimation={null}>
         {activeDragLot ? (
           <div
-            className={`lot ${statutClass(activeDragLot.statut)}`}
+            className={`lot ${statutClass(activeDragLot.statut)} ${
+              fullscreenZone ? "lot-overlay-fullscreen" : ""
+            }`}
             style={{
               cursor: "grabbing",
               boxShadow: "0 8px 22px rgba(0,0,0,0.25)",

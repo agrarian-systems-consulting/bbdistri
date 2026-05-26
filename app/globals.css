@@ -803,6 +803,21 @@ body.unplaced-on .footer-note {
   transform: scale(0.92);
   cursor: grabbing;
 }
+/* DragOverlay (au niveau du body) quand on drag depuis une zone fullscreen.
+   Reprend les tailles agrandies de .zone.fullscreen .lot pour éviter une card minuscule. */
+.lot.lot-overlay-fullscreen {
+  font-size: 0.85rem;
+  padding: 7px 9px;
+  border-left-width: 4px;
+}
+.lot.lot-overlay-fullscreen .lot-num {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+.lot.lot-overlay-fullscreen .lot-produit {
+  font-size: 0.78rem;
+  white-space: normal;
+}
 .allee.drop-target-allee,
 .prep-content.drop-target-vrac {
   background: rgba(76, 175, 80, 0.2) !important;
