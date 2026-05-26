@@ -26,6 +26,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   const [activeStatuts, setActiveStatuts] = useState<Set<StatutTriage>>(
     () => new Set(),
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allotementMode, setAllotementMode] = useState(false);
 
   const lotsParEmp = useMemo(() => groupLotsByEmplacement(lots), [lots]);
   const empsParZone = useMemo(
@@ -34,11 +36,16 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   );
 
   useEffect(() => {
-    if (fullscreenZone) {
-      document.body.classList.add("has-fullscreen");
-      return () => document.body.classList.remove("has-fullscreen");
-    }
+    if (!fullscreenZone) return;
+    document.body.classList.add("has-fullscreen");
+    return () => document.body.classList.remove("has-fullscreen");
   }, [fullscreenZone]);
+
+  useEffect(() => {
+    if (!allotementMode) return;
+    document.body.classList.add("allotement-on");
+    return () => document.body.classList.remove("allotement-on");
+  }, [allotementMode]);
 
   useEffect(() => {
     if (!fullscreenZone) return;
@@ -62,13 +69,21 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     });
   }, []);
 
+  const toggleAllotement = useCallback(() => {
+    setAllotementMode((v) => !v);
+  }, []);
+
   return (
     <>
       <Topbar
         totalLots={lots.length}
         totalEmplacements={emplacements.length}
         activeStatuts={activeStatuts}
+        searchQuery={searchQuery}
+        allotementMode={allotementMode}
         onToggleStatut={toggleStatut}
+        onSearchChange={setSearchQuery}
+        onToggleAllotement={toggleAllotement}
       />
       <HangarPlan
         empsParZone={empsParZone}
@@ -76,6 +91,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         caissonsById={caissonsById}
         hoveredLotId={hoveredLotId}
         activeStatuts={activeStatuts}
+        searchQuery={searchQuery}
         fullscreenZone={fullscreenZone}
         onToggleFullscreen={toggleFullscreen}
         onHoverChange={setHoveredLotId}

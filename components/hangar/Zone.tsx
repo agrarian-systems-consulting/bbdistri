@@ -1,3 +1,4 @@
+import { isAllotable, shouldDimByFilter } from "@/lib/hangar/filters";
 import type {
   Emplacement,
   Lot,
@@ -22,6 +23,7 @@ type Props = {
   caissonsById: Record<string, string>;
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
+  searchQuery: string;
   isFullscreen: boolean;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
@@ -34,12 +36,12 @@ export function Zone({
   caissonsById,
   hoveredLotId,
   activeStatuts,
+  searchQuery,
   isFullscreen,
   onToggleFullscreen,
   onHoverChange,
 }: Props) {
   const vrac = zone === "PREP" || zone === "TAMPON";
-  const noFilter = activeStatuts.size === 0;
 
   return (
     <section className={`zone zone-${zone} ${isFullscreen ? "fullscreen" : ""}`}>
@@ -80,7 +82,8 @@ export function Zone({
                 lot={lot}
                 caissonsById={caissonsById}
                 isHighlighted={hoveredLotId === lot.id}
-                isDimmed={!noFilter && !activeStatuts.has(lot.statut)}
+                isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
+                isAllotable={isAllotable(lot)}
                 onHoverChange={onHoverChange}
               />
             )),
@@ -96,6 +99,7 @@ export function Zone({
               caissonsById={caissonsById}
               hoveredLotId={hoveredLotId}
               activeStatuts={activeStatuts}
+              searchQuery={searchQuery}
               onHoverChange={onHoverChange}
             />
           ))}

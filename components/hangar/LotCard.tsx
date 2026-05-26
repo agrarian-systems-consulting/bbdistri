@@ -8,6 +8,7 @@ type Props = {
   caissonsById: Record<string, string>;
   isHighlighted: boolean;
   isDimmed: boolean;
+  isAllotable: boolean;
   onHoverChange: (lotId: string | null) => void;
 };
 
@@ -16,6 +17,7 @@ export function LotCard({
   caissonsById,
   isHighlighted,
   isDimmed,
+  isAllotable,
   onHoverChange,
 }: Props) {
   const caissonNumeros = lot.caissonIds
@@ -27,6 +29,7 @@ export function LotCard({
     statutClass(lot.statut),
     isHighlighted ? "highlight" : "",
     isDimmed ? "dimmed-by-filter" : "",
+    isAllotable ? "allotable" : "",
   ]
     .filter(Boolean)
     .join(" ");

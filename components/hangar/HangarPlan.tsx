@@ -13,54 +13,56 @@ type Props = {
   caissonsById: Record<string, string>;
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
+  searchQuery: string;
   fullscreenZone: ZoneType | null;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
 };
 
 export function HangarPlan(props: Props) {
-  const {
-    empsParZone,
-    lotsParEmp,
-    caissonsById,
-    hoveredLotId,
-    activeStatuts,
-    fullscreenZone,
-    onToggleFullscreen,
-    onHoverChange,
-  } = props;
-
   const zoneProps = (zone: ZoneType, emps: Emplacement[]) => ({
     zone,
     emplacements: emps,
-    lotsParEmp,
-    caissonsById,
-    hoveredLotId,
-    activeStatuts,
-    isFullscreen: fullscreenZone === zone,
-    onToggleFullscreen,
-    onHoverChange,
+    lotsParEmp: props.lotsParEmp,
+    caissonsById: props.caissonsById,
+    hoveredLotId: props.hoveredLotId,
+    activeStatuts: props.activeStatuts,
+    searchQuery: props.searchQuery,
+    isFullscreen: props.fullscreenZone === zone,
+    onToggleFullscreen: props.onToggleFullscreen,
+    onHoverChange: props.onHoverChange,
   });
 
   return (
     <main className="hangar">
       <div className="rang-haut">
         <Zone
-          {...zoneProps("A", sortEmplacements(empsParZone.get("A") ?? [], "A"))}
+          {...zoneProps(
+            "A",
+            sortEmplacements(props.empsParZone.get("A") ?? [], "A"),
+          )}
         />
         <div className="passage-vertical">passage</div>
-        <Zone {...zoneProps("PREP", empsParZone.get("PREP") ?? [])} />
+        <Zone {...zoneProps("PREP", props.empsParZone.get("PREP") ?? [])} />
       </div>
 
       <div className="allee-passage">— allée de passage —</div>
 
       <div className="rang-bas">
         <Zone
-          {...zoneProps("C", sortEmplacements(empsParZone.get("C") ?? [], "C"))}
+          {...zoneProps(
+            "C",
+            sortEmplacements(props.empsParZone.get("C") ?? [], "C"),
+          )}
         />
-        <Zone {...zoneProps("TAMPON", empsParZone.get("TAMPON") ?? [])} />
         <Zone
-          {...zoneProps("B", sortEmplacements(empsParZone.get("B") ?? [], "B"))}
+          {...zoneProps("TAMPON", props.empsParZone.get("TAMPON") ?? [])}
+        />
+        <Zone
+          {...zoneProps(
+            "B",
+            sortEmplacements(props.empsParZone.get("B") ?? [], "B"),
+          )}
         />
       </div>
     </main>

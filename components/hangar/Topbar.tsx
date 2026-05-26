@@ -6,7 +6,11 @@ type Props = {
   totalLots: number;
   totalEmplacements: number;
   activeStatuts: Set<StatutTriage>;
+  searchQuery: string;
+  allotementMode: boolean;
   onToggleStatut: (statut: StatutTriage) => void;
+  onSearchChange: (query: string) => void;
+  onToggleAllotement: () => void;
 };
 
 const LEGEND_STATUTS: Array<{
@@ -28,7 +32,11 @@ export function Topbar({
   totalLots,
   totalEmplacements,
   activeStatuts,
+  searchQuery,
+  allotementMode,
   onToggleStatut,
+  onSearchChange,
+  onToggleAllotement,
 }: Props) {
   const noFilter = activeStatuts.size === 0;
   return (
@@ -50,18 +58,28 @@ export function Topbar({
         <div className="search-bar">
           <div className="search-wrap">
             <input
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
               placeholder="🔍  Produit ou N°lot…"
               autoComplete="off"
               aria-label="Rechercher un produit ou un N°lot"
             />
           </div>
-          <button type="button" title="Effacer">
+          <button
+            type="button"
+            title="Effacer"
+            onClick={() => onSearchChange("")}
+            disabled={searchQuery.length === 0}
+            style={{ opacity: searchQuery.length === 0 ? 0.3 : undefined }}
+          >
             ✕
           </button>
         </div>
         <button
           type="button"
-          className="allotement-toggle"
+          className={`allotement-toggle ${allotementMode ? "active" : ""}`}
+          onClick={onToggleAllotement}
+          aria-pressed={allotementMode}
           title="Suggestions d'allotements — regrouper les lots compatibles"
         >
           <svg

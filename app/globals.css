@@ -288,6 +288,27 @@ body.hangar-bg {
   pointer-events: none;
 }
 
+/* Mode allotements : isole les lots dont CléSuggestionAllotement est non vide */
+body.allotement-on .lot:not(.allotable) {
+  opacity: 0.15;
+  filter: grayscale(0.5);
+  pointer-events: none;
+}
+body.allotement-on .lot.allotable {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+body.allotement-on .lot.allotable::after {
+  content: "⇋";
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.7rem;
+  color: #d97706;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Hangar conteneur */
 .hangar {
   margin: 14px;

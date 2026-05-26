@@ -1,3 +1,4 @@
+import { isAllotable, shouldDimByFilter } from "@/lib/hangar/filters";
 import type { Emplacement, Lot, StatutTriage } from "@/lib/types/domain";
 import { LotCard } from "./LotCard";
 
@@ -7,6 +8,7 @@ type Props = {
   caissonsById: Record<string, string>;
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
+  searchQuery: string;
   onHoverChange: (lotId: string | null) => void;
 };
 
@@ -16,11 +18,11 @@ export function Allee({
   caissonsById,
   hoveredLotId,
   activeStatuts,
+  searchQuery,
   onHoverChange,
 }: Props) {
   const empty = lots.length === 0;
   const label = emplacement.allee ?? emplacement.name;
-  const noFilter = activeStatuts.size === 0;
   return (
     <div className={`allee ${empty ? "vide" : ""}`} data-emp-id={emplacement.id}>
       <div className="allee-header">{label}</div>
@@ -31,7 +33,8 @@ export function Allee({
             lot={lot}
             caissonsById={caissonsById}
             isHighlighted={hoveredLotId === lot.id}
-            isDimmed={!noFilter && !activeStatuts.has(lot.statut)}
+            isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
+            isAllotable={isAllotable(lot)}
             onHoverChange={onHoverChange}
           />
         ))}
