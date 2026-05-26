@@ -13,14 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { statutClass } from "@/lib/hangar/statut";
-import type { Emplacement, Lot } from "@/lib/types/domain";
+import type { Emplacement, LightLot } from "@/lib/types/domain";
 
 type Props = {
   emplacement: Emplacement | null;
   emplacementsById: Map<string, Emplacement>;
-  caissonsById: Record<string, string>;
   onClose: () => void;
-  onAdd: (lot: Lot, emplacement: Emplacement) => Promise<void>;
+  onAdd: (lot: LightLot, emplacement: Emplacement) => Promise<void>;
 };
 
 function StatutChip({ statut }: { statut: string }) {
@@ -46,11 +45,10 @@ function StatutChip({ statut }: { statut: string }) {
 export function AddLotModal({
   emplacement,
   emplacementsById,
-  caissonsById,
   onClose,
   onAdd,
 }: Props) {
-  const [allLots, setAllLots] = useState<Lot[] | null>(null);
+  const [allLots, setAllLots] = useState<LightLot[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedLotId, setSelectedLotId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,7 +63,7 @@ export function AddLotModal({
       try {
         const res = await fetch("/api/lots/all");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { lots: Lot[] };
+        const data = (await res.json()) as { lots: LightLot[] };
         if (!cancelled) setAllLots(data.lots);
       } catch (err) {
         if (!cancelled) {
@@ -111,12 +109,6 @@ export function AddLotModal({
         .map((id) => emplacementsById.get(id)?.name)
         .filter((n): n is string => Boolean(n))
     : [];
-  const caissonNumeros = selectedLot
-    ? selectedLot.caissonIds
-        .map((id) => caissonsById[id])
-        .filter((n): n is string => Boolean(n))
-    : [];
-  const isEpuise = selectedLot?.statut === "Epuisé";
 
   const submit = async () => {
     if (!selectedLot || alreadyHere || saving) return;
@@ -178,11 +170,6 @@ export function AddLotModal({
                     {selectedLot.nom}
                   </span>
                   <StatutChip statut={selectedLot.statut} />
-                  {selectedLot.bioC2 ? (
-                    <span className="text-xs text-stone-500">
-                      {selectedLot.bioC2}
-                    </span>
-                  ) : null}
                 </div>
                 <div className="text-stone-700">
                   {selectedLot.produit ?? "Produit non défini"}
@@ -207,19 +194,6 @@ export function AddLotModal({
                     </span>
                   ) : null}
                 </div>
-                {caissonNumeros.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 items-center text-xs">
-                    <span className="text-stone-500">Caissons :</span>
-                    {caissonNumeros.map((n) => (
-                      <span
-                        key={n}
-                        className="px-2 py-0.5 rounded bg-amber-700 text-amber-50"
-                      >
-                        Caisson {n}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
 
                 {alreadyHere ? (
                   <p className="text-xs text-red-600 mt-2">
@@ -231,12 +205,6 @@ export function AddLotModal({
                     {otherEmpNames.length} emplacement
                     {otherEmpNames.length > 1 ? "s" : ""}. L&apos;ajouter ici
                     revient à le scinder en une fraction supplémentaire.
-                  </p>
-                ) : null}
-                {isEpuise ? (
-                  <p className="text-xs text-amber-700">
-                    Ce lot est marqué « Épuisé ». Pense à changer son statut si
-                    tu réintroduis du stock.
                   </p>
                 ) : null}
               </div>

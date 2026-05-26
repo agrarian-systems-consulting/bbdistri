@@ -1,7 +1,7 @@
 import "server-only";
 import type { FieldSet, Record as AirtableRecord } from "airtable";
 import { getBase, TABLE_IDS } from "./client";
-import type { BioC2, Lot, StatutTriage } from "@/lib/types/domain";
+import type { BioC2, LightLot, Lot, StatutTriage } from "@/lib/types/domain";
 
 const LOT_FIELDS = [
   "Lot",
@@ -51,6 +51,31 @@ export async function fetchAllLots(): Promise<Lot[]> {
     .select({ fields: LOT_FIELDS as unknown as string[] })
     .all();
   return records.map(recordToLot);
+}
+
+const LIGHT_LOT_FIELDS = [
+  "Lot",
+  "Statut triage",
+  "Produit (court)",
+  "Emplacements",
+] as const;
+
+export async function fetchLightLots(): Promise<LightLot[]> {
+  const records = await getBase()(TABLE_IDS.Lots)
+    .select({ fields: LIGHT_LOT_FIELDS as unknown as string[] })
+    .all();
+  return records.map((r) => {
+    const produitCourt = r.get("Produit (court)") as string[] | undefined;
+    return {
+      id: r.id,
+      nom: (r.get("Lot") as string | undefined) ?? "",
+      statut:
+        (r.get("Statut triage") as StatutTriage | undefined) ?? "Non affecté",
+      produit: produitCourt?.[0] ?? null,
+      emplacementIds:
+        (r.get("Emplacements") as string[] | undefined) ?? [],
+    };
+  });
 }
 
 let cachedHangarDepotId: string | null = null;

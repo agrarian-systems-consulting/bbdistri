@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { fetchAllLots } from "@/lib/airtable/lots";
+import { fetchLightLots } from "@/lib/airtable/lots";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Liste légère des lots actifs pour le typeahead AddLotModal.
+ * On exclut Épuisé et Non affecté (l'utilisateur doit changer le statut dans
+ * Airtable d'abord pour les replacer) et on retourne juste les champs nécessaires
+ * à la sélection + au warning "déjà placé".
+ */
 export async function GET() {
   try {
-    const lots = await fetchAllLots();
+    const lots = await fetchLightLots();
     const active = lots.filter(
       (l) => l.statut !== "Epuisé" && l.statut !== "Non affecté",
     );

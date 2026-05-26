@@ -33,6 +33,7 @@ import {
 import { statutClass } from "@/lib/hangar/statut";
 import type {
   Emplacement,
+  LightLot,
   Lot,
   StatutTriage,
   Zone as ZoneType,
@@ -262,36 +263,69 @@ export function HangarView({
   }, []);
 
   const handleAddLot = useCallback(
-    async (lot: Lot, emp: Emplacement) => {
-      if (lot.emplacementIds.includes(emp.id)) return;
-      const previousIds = [...lot.emplacementIds];
+    async (lightLot: LightLot, emp: Emplacement) => {
+      if (lightLot.emplacementIds.includes(emp.id)) return;
+      const previousIds = [...lightLot.emplacementIds];
       const newIds = [...previousIds, emp.id];
 
-      const lotKnownLocally = localLots.some((l) => l.id === lot.id);
-      if (lotKnownLocally) {
-        applyLocalEmplacementsUpdate(lot.id, newIds);
+      const localLot = localLots.find((l) => l.id === lightLot.id);
+      if (localLot) {
+        applyLocalEmplacementsUpdate(lightLot.id, newIds);
       } else {
-        setLocalLots((prev) => [...prev, { ...lot, emplacementIds: newIds }]);
+        // Lot pas encore dans localLots (par ex. lot hors Hangar). On crée une
+        // version minimale du Lot pour le state — les détails seront récupérés
+        // au prochain refresh.
+        setLocalLots((prev) => [
+          ...prev,
+          {
+            id: lightLot.id,
+            nom: lightLot.nom,
+            statut: lightLot.statut,
+            produit: lightLot.produit,
+            bioC2: null,
+            emplacementIds: newIds,
+            caissonIds: [],
+            destinationIds: [],
+            depotIds: [],
+            cleAllotement: null,
+            commentaire: null,
+          },
+        ]);
       }
 
       try {
-        await patchLotEmplacements(lot.id, newIds);
-        toast(`Lot ${lot.nom} ajouté en ${emp.name}`, {
+        await patchLotEmplacements(lightLot.id, newIds);
+        toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
           description:
             previousIds.length > 0
               ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
               : "Placement initial",
           action: {
             label: "Annuler",
-            onClick: () => undoMove({ ...lot, emplacementIds: newIds }, previousIds),
+            onClick: () => {
+              const lotForUndo = localLots.find((l) => l.id === lightLot.id) ?? {
+                id: lightLot.id,
+                nom: lightLot.nom,
+                statut: lightLot.statut,
+                produit: lightLot.produit,
+                bioC2: null,
+                emplacementIds: newIds,
+                caissonIds: [],
+                destinationIds: [],
+                depotIds: [],
+                cleAllotement: null,
+                commentaire: null,
+              };
+              undoMove(lotForUndo, previousIds);
+            },
           },
           duration: 5000,
         });
       } catch (err) {
-        if (lotKnownLocally) {
-          applyLocalEmplacementsUpdate(lot.id, previousIds);
+        if (localLot) {
+          applyLocalEmplacementsUpdate(lightLot.id, previousIds);
         } else {
-          setLocalLots((prev) => prev.filter((l) => l.id !== lot.id));
+          setLocalLots((prev) => prev.filter((l) => l.id !== lightLot.id));
         }
         toast.error("Ajout échoué", {
           description: err instanceof Error ? err.message : String(err),
@@ -550,7 +584,6 @@ export function HangarView({
       <AddLotModal
         emplacement={addingToEmpId ? (empsById.get(addingToEmpId) ?? null) : null}
         emplacementsById={empsById}
-        caissonsById={caissonsById}
         onClose={() => setAddingToEmpId(null)}
         onAdd={handleAddLot}
       />
