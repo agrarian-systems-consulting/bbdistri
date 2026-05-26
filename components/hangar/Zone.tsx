@@ -1,3 +1,7 @@
+"use client";
+
+import { useDroppable } from "@dnd-kit/core";
+import { droppableEmplacementId } from "@/lib/hangar/dnd-ids";
 import { isAllotable, shouldDimByFilter } from "@/lib/hangar/filters";
 import type {
   Emplacement,
@@ -28,6 +32,49 @@ type Props = {
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
 };
+
+function VracDropZone({
+  emplacement,
+  lots,
+  caissonsById,
+  hoveredLotId,
+  activeStatuts,
+  searchQuery,
+  onHoverChange,
+}: {
+  emplacement: Emplacement;
+  lots: Lot[];
+  caissonsById: Record<string, string>;
+  hoveredLotId: string | null;
+  activeStatuts: Set<StatutTriage>;
+  searchQuery: string;
+  onHoverChange: (lotId: string | null) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableEmplacementId(emplacement.id),
+    data: { emplacementId: emplacement.id },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`prep-content ${isOver ? "drop-target-vrac" : ""}`}
+      data-emp-id={emplacement.id}
+    >
+      {lots.map((lot) => (
+        <LotCard
+          key={`${emplacement.id}-${lot.id}`}
+          lot={lot}
+          emplacementId={emplacement.id}
+          caissonsById={caissonsById}
+          isHighlighted={hoveredLotId === lot.id}
+          isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
+          isAllotable={isAllotable(lot)}
+          onHoverChange={onHoverChange}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function Zone({
   zone,
@@ -74,21 +121,19 @@ export function Zone({
         </button>
       </span>
       {vrac ? (
-        <div className="prep-content">
-          {emplacements.flatMap((emp) =>
-            (lotsParEmp.get(emp.id) ?? []).map((lot) => (
-              <LotCard
-                key={`${emp.id}-${lot.id}`}
-                lot={lot}
-                caissonsById={caissonsById}
-                isHighlighted={hoveredLotId === lot.id}
-                isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
-                isAllotable={isAllotable(lot)}
-                onHoverChange={onHoverChange}
-              />
-            )),
-          )}
-        </div>
+        emplacements.length > 0 ? (
+          <VracDropZone
+            emplacement={emplacements[0]}
+            lots={emplacements.flatMap((e) => lotsParEmp.get(e.id) ?? [])}
+            caissonsById={caissonsById}
+            hoveredLotId={hoveredLotId}
+            activeStatuts={activeStatuts}
+            searchQuery={searchQuery}
+            onHoverChange={onHoverChange}
+          />
+        ) : (
+          <div className="prep-content" />
+        )
       ) : (
         <div className="allees">
           {emplacements.map((emp) => (

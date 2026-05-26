@@ -490,9 +490,21 @@ body.allotement-on .lot.allotable::after {
   padding: 3px 4px;
   font-size: 0.58rem;
   line-height: 1.25;
-  cursor: pointer;
+  cursor: grab;
   transition: background 0.1s, transform 0.1s;
   position: relative;
+  touch-action: none;
+}
+.lot.dragging {
+  opacity: 0.4;
+  transform: scale(0.92);
+  cursor: grabbing;
+}
+.allee.drop-target-allee,
+.prep-content.drop-target-vrac {
+  background: rgba(76, 175, 80, 0.2) !important;
+  outline: 2px dashed #2e7d32;
+  outline-offset: -2px;
 }
 .lot:hover {
   transform: translateY(-1px);

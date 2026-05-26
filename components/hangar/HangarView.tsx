@@ -2,6 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  parseDraggableLotId,
+  parseDroppableEmplacementId,
+} from "@/lib/hangar/dnd-ids";
+import {
   groupEmplacementsByZone,
   groupLotsByEmplacement,
 } from "@/lib/hangar/layout";
@@ -73,8 +86,26 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     setAllotementMode((v) => !v);
   }, []);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const src = parseDraggableLotId(String(active.id));
+    const dst = parseDroppableEmplacementId(String(over.id));
+    if (!src || !dst) return;
+    if (src.emplacementId === dst) return;
+    console.log("[dnd] move", src.lotId, "from", src.emplacementId, "→", dst);
+  }, []);
+
   return (
-    <>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <Topbar
         totalLots={lots.length}
         totalEmplacements={emplacements.length}
@@ -100,6 +131,6 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
         <em>Hangar</em> filtrés en amont.
       </p>
-    </>
+    </DndContext>
   );
 }
