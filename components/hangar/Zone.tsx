@@ -1,4 +1,9 @@
-import type { Emplacement, Lot, Zone as ZoneType } from "@/lib/types/domain";
+import type {
+  Emplacement,
+  Lot,
+  StatutTriage,
+  Zone as ZoneType,
+} from "@/lib/types/domain";
 import { Allee } from "./Allee";
 import { LotCard } from "./LotCard";
 
@@ -10,27 +15,46 @@ const ZONE_LABELS: Record<ZoneType, string> = {
   TAMPON: "TAMPON",
 };
 
+type Props = {
+  zone: ZoneType;
+  emplacements: Emplacement[];
+  lotsParEmp: Map<string, Lot[]>;
+  caissonsById: Record<string, string>;
+  hoveredLotId: string | null;
+  activeStatuts: Set<StatutTriage>;
+  isFullscreen: boolean;
+  onToggleFullscreen: (zone: ZoneType) => void;
+  onHoverChange: (lotId: string | null) => void;
+};
+
 export function Zone({
   zone,
   emplacements,
   lotsParEmp,
-}: {
-  zone: ZoneType;
-  emplacements: Emplacement[];
-  lotsParEmp: Map<string, Lot[]>;
-}) {
+  caissonsById,
+  hoveredLotId,
+  activeStatuts,
+  isFullscreen,
+  onToggleFullscreen,
+  onHoverChange,
+}: Props) {
   const vrac = zone === "PREP" || zone === "TAMPON";
+  const noFilter = activeStatuts.size === 0;
 
   return (
-    <section className={`zone zone-${zone}`}>
+    <section className={`zone zone-${zone} ${isFullscreen ? "fullscreen" : ""}`}>
       <span className="zone-label">
         {ZONE_LABELS[zone]}
         <button
           type="button"
           className="fs-toggle"
-          data-fs={`zone-${zone}`}
-          title="Plein écran"
-          aria-label={`Plein écran ${ZONE_LABELS[zone]}`}
+          onClick={() => onToggleFullscreen(zone)}
+          title={isFullscreen ? "Fermer plein écran" : "Plein écran"}
+          aria-label={
+            isFullscreen
+              ? `Fermer plein écran ${ZONE_LABELS[zone]}`
+              : `Plein écran ${ZONE_LABELS[zone]}`
+          }
         >
           <svg
             viewBox="0 0 24 24"
@@ -51,7 +75,14 @@ export function Zone({
         <div className="prep-content">
           {emplacements.flatMap((emp) =>
             (lotsParEmp.get(emp.id) ?? []).map((lot) => (
-              <LotCard key={`${emp.id}-${lot.id}`} lot={lot} />
+              <LotCard
+                key={`${emp.id}-${lot.id}`}
+                lot={lot}
+                caissonsById={caissonsById}
+                isHighlighted={hoveredLotId === lot.id}
+                isDimmed={!noFilter && !activeStatuts.has(lot.statut)}
+                onHoverChange={onHoverChange}
+              />
             )),
           )}
         </div>
@@ -62,6 +93,10 @@ export function Zone({
               key={emp.id}
               emplacement={emp}
               lots={lotsParEmp.get(emp.id) ?? []}
+              caissonsById={caissonsById}
+              hoveredLotId={hoveredLotId}
+              activeStatuts={activeStatuts}
+              onHoverChange={onHoverChange}
             />
           ))}
         </div>

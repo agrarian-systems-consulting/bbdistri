@@ -1,16 +1,36 @@
+"use client";
+
+import type { StatutTriage } from "@/lib/types/domain";
+
 type Props = {
   totalLots: number;
   totalEmplacements: number;
+  activeStatuts: Set<StatutTriage>;
+  onToggleStatut: (statut: StatutTriage) => void;
 };
 
-const LEGEND_STATUTS = [
-  { label: "Trié", color: "var(--statut-trie)" },
-  { label: "Brut", color: "var(--statut-brut)" },
-  { label: "À retrier", color: "var(--statut-aretrier)" },
-  { label: "Trié stocké", color: "var(--statut-triestocke)" },
-] as const;
+const LEGEND_STATUTS: Array<{
+  label: string;
+  statut: StatutTriage;
+  color: string;
+}> = [
+  { label: "Trié", statut: "Trié", color: "var(--statut-trie)" },
+  { label: "Brut", statut: "Brut", color: "var(--statut-brut)" },
+  { label: "À retrier", statut: "A retrier", color: "var(--statut-aretrier)" },
+  {
+    label: "Trié stocké",
+    statut: "Trié stocké",
+    color: "var(--statut-triestocke)",
+  },
+];
 
-export function Topbar({ totalLots, totalEmplacements }: Props) {
+export function Topbar({
+  totalLots,
+  totalEmplacements,
+  activeStatuts,
+  onToggleStatut,
+}: Props) {
+  const noFilter = activeStatuts.size === 0;
   return (
     <header className="topbar">
       <div>
@@ -60,12 +80,35 @@ export function Topbar({ totalLots, totalEmplacements }: Props) {
           <span>Allotements</span>
         </button>
         <div className="legend">
-          {LEGEND_STATUTS.map((s) => (
-            <span key={s.label} className="legend-item">
-              <span className="legend-dot" style={{ background: s.color }} />
-              {s.label}
-            </span>
-          ))}
+          {LEGEND_STATUTS.map(({ label, statut, color }) => {
+            const isActive = activeStatuts.has(statut);
+            const classes = [
+              "legend-item",
+              "clickable",
+              isActive ? "toggle-on" : "",
+              !noFilter && !isActive ? "dimmed" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return (
+              <span
+                key={statut}
+                className={classes}
+                onClick={() => onToggleStatut(statut)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onToggleStatut(statut);
+                  }
+                }}
+              >
+                <span className="legend-dot" style={{ background: color }} />
+                {label}
+              </span>
+            );
+          })}
         </div>
       </div>
     </header>

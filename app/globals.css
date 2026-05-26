@@ -265,12 +265,27 @@ body.hangar-bg {
   padding: 3px 8px;
   border-radius: 12px;
   user-select: none;
+  transition: background 0.15s, opacity 0.15s;
 }
+.legend-item.clickable { cursor: pointer; }
+.legend-item.clickable:hover { background: rgba(255, 255, 255, 0.1); }
+.legend-item.toggle-on {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.legend-item.dimmed { opacity: 0.45; }
 .legend-dot {
   width: 11px;
   height: 11px;
   border-radius: 2px;
   display: inline-block;
+}
+
+/* Lot atténué (ne correspond pas au filtre actif) */
+.lot.dimmed-by-filter {
+  opacity: 0.13;
+  filter: grayscale(0.5);
+  pointer-events: none;
 }
 
 /* Hangar conteneur */
@@ -488,6 +503,105 @@ body.hangar-bg {
   border-color: var(--highlight-border) !important;
   box-shadow: 0 0 0 2px var(--highlight-border);
   z-index: 2;
+}
+
+/* Badges caisson — cachés en vue globale, visibles en fullscreen + modale */
+.lot-caissons {
+  margin-top: 3px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.zone.fullscreen .lot-caissons {
+  display: inline-flex;
+}
+.lot-caisson-tag {
+  font-size: 0.5rem;
+  padding: 1px 5px;
+  background: #463a28;
+  color: #f5f1ea;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.zone.fullscreen .lot-caisson-tag {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+/* Mode plein écran d'une zone + overlay */
+.zone.fullscreen {
+  position: fixed;
+  inset: 50px 14px 14px 14px;
+  z-index: 40;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border: 4px solid var(--hangar-wall);
+  border-radius: 8px;
+  animation: fs-zoom-in 0.22s ease-out;
+  min-height: 0;
+}
+@keyframes fs-zoom-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.zone.fullscreen .zone-label {
+  font-size: 0.95rem;
+  padding: 10px 18px;
+}
+.zone.fullscreen .fs-toggle {
+  width: 26px;
+  height: 26px;
+}
+.zone.fullscreen .fs-toggle svg { display: none; }
+.zone.fullscreen .fs-toggle::after {
+  content: "×";
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 400;
+  color: #b34040;
+}
+.zone.fullscreen .fs-toggle:hover::after { color: #8b1f1f; }
+.zone.fullscreen .fs-toggle:hover {
+  background: rgba(220, 53, 53, 0.1);
+}
+.zone.fullscreen .allees {
+  padding: 56px 8px 8px 8px;
+  gap: 4px;
+  height: calc(100% - 8px);
+}
+.zone.fullscreen .allee { min-height: 0; }
+.zone.fullscreen .allee-header {
+  font-size: 0.95rem;
+  padding: 6px 0;
+}
+.zone.fullscreen .lot {
+  font-size: 0.85rem;
+  padding: 7px 9px;
+  border-left-width: 4px;
+}
+.zone.fullscreen .lot-num {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+.zone.fullscreen .lot-produit {
+  font-size: 0.78rem;
+  white-space: normal;
+}
+.zone.fullscreen .prep-content {
+  padding: 62px 12px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  gap: 6px;
+}
+.zone.fullscreen .prep-content .lot { min-height: 56px; }
+
+body.has-fullscreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 36, 24, 0.55);
+  z-index: 35;
+  animation: fs-zoom-in 0.22s ease-out;
 }
 
 .footer-note {
