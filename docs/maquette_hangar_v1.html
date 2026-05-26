@@ -1,0 +1,2108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maquette — Interface Hangar SCIC</title>
+  <!-- Tailwind via CDN play.js : utilisé pour la modal d'édition uniquement.
+       En prod (Next.js), on intègrera Tailwind proprement via PostCSS. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ============================================================
+       Maquette HTML statique — Interface Hangar SCIC Graines équitables
+       Version v1, 2026-05-20
+       - Vraies données Airtable (77 allées physiques A/B/C, 237 lots placés)
+       - Produits + statuts MOCKÉS (déterministes par N°lot)
+       - Pas de drag-and-drop, pas d'écriture, juste un visuel pour validation
+       ============================================================ */
+
+    :root {
+      --bg-page: #f5f1ea;            /* fond clair, ambiance hangar */
+      --hangar-wall: #6b5b4a;        /* murs du hangar (marron) */
+      --hangar-floor: #efe7da;       /* sol du hangar */
+      --passage: #e2dccf;            /* allée de passage centrale */
+      --zone-a-bg: #e3edf7;          /* zone A — bleu très clair */
+      --zone-b-bg: #f0eed5;          /* zone B — beige */
+      --zone-c-bg: #f7e0e0;          /* zone C — rouge très clair */
+      --zone-prep-bg: #e6f3e6;       /* zone préparation commande — vert très clair */
+      --zone-tampon-bg: #ede0f5;     /* zone tampon — violet très clair */
+      --zone-label: #444;
+      --allee-border: #b6a890;
+      --allee-header-bg: #d6cab1;
+      --allee-empty: #e8e3d7;        /* allée vide */
+      --card-bg: #ffffff;
+      --card-border: #cbc1ad;
+      --statut-trie: #4caf50;
+      --statut-brut: #ff9800;
+      --statut-nonaffecte: #9e9e9e;
+      --statut-triestocke: #2196f3;
+      --statut-aretrier: #d81b60;     /* rose foncé — attire l'œil "action requise" */
+      --highlight: #fff176;          /* jaune vif pour hover */
+      --highlight-border: #fbc02d;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-page);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #222;
+    }
+
+    /* Bandeau du haut */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: #2b2418;
+      color: #f5f1ea;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .topbar .subtitle {
+      font-size: 0.78rem;
+      opacity: 0.7;
+      margin-left: 8px;
+    }
+    .legend {
+      display: flex;
+      gap: 8px;
+      font-size: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      user-select: none;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .legend-item.clickable { cursor: pointer; }
+    .legend-item.clickable:hover { background: rgba(255,255,255,0.10); }
+    .legend-item.toggle-on {
+      background: rgba(255,255,255,0.20);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+    }
+    .legend-item.dimmed { opacity: 0.45; }
+    .legend-dot {
+      width: 11px; height: 11px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* Barre de recherche produit (avec dropdown custom) */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      font-size: 0.78rem;
+    }
+    .search-wrap {
+      position: relative;
+    }
+    .search-bar input {
+      background: #1a140c;
+      border: 1px solid #4a3f30;
+      color: #f5f1ea;
+      padding: 5px 9px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      width: 220px;
+      outline: none;
+    }
+    .search-bar input:focus { border-color: var(--statut-trie); }
+    .search-bar button {
+      background: transparent;
+      border: 1px solid #4a3f30;
+      color: #f5f1ea;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+    .search-bar button:hover { opacity: 1; }
+
+    /* Dropdown custom (suggestions de produits) */
+    .search-suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 280px;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #1a140c;
+      border: 1px solid #4a3f30;
+      border-radius: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 50;
+      padding: 4px 0;
+    }
+    .search-suggestions.hidden { display: none; }
+    .search-suggestion {
+      padding: 6px 12px;
+      cursor: pointer;
+      color: #f5f1ea;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background 0.1s;
+    }
+    .search-suggestion:hover,
+    .search-suggestion.active {
+      background: rgba(245, 241, 234, 0.08);
+    }
+    .search-suggestion .count {
+      color: #8b7d65;
+      font-size: 0.7rem;
+      margin-left: 6px;
+    }
+    .search-suggestions-empty {
+      padding: 10px 12px;
+      color: #8b7d65;
+      font-size: 0.75rem;
+      font-style: italic;
+    }
+    /* Scrollbar discret */
+    .search-suggestions::-webkit-scrollbar { width: 6px; }
+    .search-suggestions::-webkit-scrollbar-thumb {
+      background: #4a3f30;
+      border-radius: 3px;
+    }
+
+    /* Toggle "Suggestions d'allotements" */
+    .allotement-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid #4a3f30;
+      color: #f5f1ea;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-right: 12px;
+      transition: all 0.15s;
+      opacity: 0.75;
+    }
+    .allotement-toggle svg { width: 14px; height: 14px; }
+    .allotement-toggle:hover {
+      opacity: 1;
+      background: rgba(245, 241, 234, 0.05);
+    }
+    .allotement-toggle.active {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: #1a140c;
+      opacity: 1;
+    }
+
+    /* Lot atténué (ne correspond pas au filtre actif) */
+    .lot.dimmed-by-filter {
+      opacity: 0.13;
+      filter: grayscale(0.5);
+      pointer-events: none;
+    }
+
+    /* Toast d'undo — apparaît en bas à droite après une action,
+       disparaît au bout de 5s ou au clic sur "Annuler" */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #2b2418;
+      color: #f5f1ea;
+      padding: 12px 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      z-index: 100;
+      animation: toast-in 0.25s ease-out;
+      max-width: 420px;
+      overflow: hidden;
+    }
+    @keyframes toast-in {
+      from { transform: translateY(24px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .toast.leaving { animation: toast-out 0.2s ease-in forwards; }
+    @keyframes toast-out {
+      to { transform: translateY(24px); opacity: 0; }
+    }
+    .toast-message { flex: 1; font-size: 0.82rem; line-height: 1.3; }
+    .toast-message .lot-ref {
+      font-family: ui-monospace, "SF Mono", monospace;
+      background: rgba(245, 241, 234, 0.1);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.78rem;
+    }
+    .toast-undo {
+      background: #f59e0b;
+      color: #1a140c;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+    .toast-undo:hover { background: #d97706; }
+    .toast-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: #f59e0b;
+      width: 100%;
+      animation: toast-progress 5s linear forwards;
+    }
+    @keyframes toast-progress {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+
+    /* Placeholder "+" pour ajouter un lot — apparaît au hover d'une allée */
+    .lot-add-placeholder {
+      border: 1.5px dashed #c8b88f;
+      border-radius: 3px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8b7d65;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+      background: transparent;
+      user-select: none;
+    }
+    .allee:hover .lot-add-placeholder,
+    .prep-content:hover .lot-add-placeholder {
+      opacity: 0.6;
+    }
+    .lot-add-placeholder:hover {
+      opacity: 1 !important;
+      background: rgba(76, 175, 80, 0.10);
+      border-color: #2e7d32;
+      color: #2e7d32;
+    }
+    .zone.fullscreen .lot-add-placeholder {
+      min-height: 50px;
+      font-size: 1.4rem;
+    }
+
+    /* État allotements (toggle global)
+       - lot allotable : bordure ambrée + badge "groupe"
+       - autres lots : atténués
+       - au hover d'un lot allotable, ses semblables (même clé) sont highlightés */
+    body.allotement-on .lot:not(.allotable) {
+      opacity: 0.15;
+      filter: grayscale(0.5);
+      pointer-events: none;
+    }
+    body.allotement-on .lot.allotable {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+    }
+    body.allotement-on .lot.allotable::after {
+      content: "⇋";
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      font-size: 0.7rem;
+      color: #d97706;
+      font-weight: 700;
+      line-height: 1;
+    }
+    /* Position relative pour que le ::after se positionne correctement */
+    .lot { position: relative; }
+
+    /* Drag & drop */
+    .lot[draggable="true"] { cursor: grab; }
+    .lot.dragging {
+      opacity: 0.4;
+      transform: scale(0.92);
+      cursor: grabbing;
+    }
+    [data-drop-empl].drop-target-allee {
+      background: rgba(76, 175, 80, 0.20) !important;
+      outline: 2px dashed #2e7d32;
+      outline-offset: -2px;
+    }
+    [data-drop-empl].drop-target-vrac {
+      background: rgba(76, 175, 80, 0.15);
+      outline: 2px dashed #2e7d32;
+      outline-offset: -2px;
+    }
+
+    /* Le hangar — rectangle complet. Pas de cadre épais, juste une fine ligne. */
+    .hangar {
+      margin: 14px;
+      background: var(--hangar-floor);
+      border: 1px solid var(--allee-border);
+      border-radius: 4px;
+      display: grid;
+      grid-template-rows: auto auto auto; /* haut (A+C) / passage / B */
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    /* Rang 1 : zone A (gauche) + passage vertical + zone prépa commande (droite) */
+    .rang-haut {
+      display: grid;
+      grid-template-columns: 17fr 1fr 11fr; /* A : passage : Prépa */
+      gap: 4px;
+      padding: 4px;
+    }
+
+    /* Allée de passage horizontale (au milieu, entre haut et bas) */
+    .allee-passage {
+      background: var(--passage);
+      border-top: 1px dashed var(--allee-border);
+      border-bottom: 1px dashed var(--allee-border);
+      padding: 12px 8px;
+      text-align: center;
+      font-style: italic;
+      font-size: 0.78rem;
+      color: #7a6a52;
+      letter-spacing: 0.05em;
+    }
+
+    /* Allée de passage verticale (entre zone A et zone prépa commande) */
+    .passage-vertical {
+      background: var(--passage);
+      border-left: 1px dashed var(--allee-border);
+      border-right: 1px dashed var(--allee-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-style: italic;
+      font-size: 0.65rem;
+      color: #7a6a52;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      letter-spacing: 0.1em;
+    }
+
+    /* Rang 3 : zone C (gauche, 15 allées) + zone tampon (milieu) + zone B (droite, 20 allées) */
+    .rang-bas {
+      display: grid;
+      grid-template-columns: 15fr 5fr 20fr;
+      gap: 4px;
+      padding: 4px;
+    }
+
+    /* Les 3 zones */
+    .zone {
+      border-radius: 3px;
+      padding: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+    .zone-A      { background: var(--zone-a-bg); }
+    .zone-B      { background: var(--zone-b-bg); }
+    .zone-C      { background: var(--zone-c-bg); }
+    .zone-PREP   { background: var(--zone-prep-bg); }
+    .zone-TAMPON { background: var(--zone-tampon-bg); }
+
+    /* Bandeau "nom de zone" — encadré dans le coin haut-gauche, avec
+       fond opaque, bordure, et le bouton fullscreen intégré. */
+    .zone-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.95);
+      border-right: 1px solid var(--allee-border);
+      border-bottom: 1px solid var(--allee-border);
+      border-radius: 0 0 8px 0;
+      color: #4a3e29;
+      font-weight: 700;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    /* Bouton plein écran — intégré au bandeau du nom de zone */
+    .fs-toggle {
+      pointer-events: auto;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      color: #6b5b4a;
+      transition: all 0.15s;
+    }
+    .fs-toggle:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: #2b2418;
+    }
+    .fs-toggle svg { width: 12px; height: 12px; }
+
+    /* En mode plein écran : on remplace l'icône expand par une croix
+       (rouge sobre) qui signale clairement "fermer" */
+    .zone.fullscreen .fs-toggle svg { display: none; }
+    .zone.fullscreen .fs-toggle::after {
+      content: "×";
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 400;
+      color: #b34040;
+    }
+    .zone.fullscreen .fs-toggle:hover::after { color: #8b1f1f; }
+    .zone.fullscreen .fs-toggle:hover {
+      background: rgba(220, 53, 53, 0.1);
+    }
+
+    /* Zone en mode plein écran */
+    .zone.fullscreen {
+      position: fixed;
+      inset: 50px 14px 14px 14px;
+      z-index: 40;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      border: 4px solid var(--hangar-wall);
+      border-radius: 8px;
+      animation: fs-zoom-in 0.22s ease-out;
+      min-height: 0;
+    }
+    @keyframes fs-zoom-in {
+      from { opacity: 0; transform: scale(0.94); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    /* En fullscreen, le bandeau reste collé au coin (pas décollé) pour
+       garder le look "encadré" propre. La taille de font augmente. */
+    .zone.fullscreen .zone-label {
+      font-size: 0.95rem;
+      padding: 10px 18px;
+    }
+    .zone.fullscreen .fs-toggle {
+      width: 26px;
+      height: 26px;
+    }
+    .zone.fullscreen .fs-toggle svg { width: 15px; height: 15px; }
+
+    /* En fullscreen : agrandir les allées et les cards lot */
+    .zone.fullscreen .allees {
+      padding: 56px 8px 8px 8px;
+      gap: 4px;
+      height: calc(100% - 8px);
+    }
+    .zone.fullscreen .allee { min-height: 0; }
+    .zone.fullscreen .allee-header {
+      font-size: 0.95rem;
+      padding: 6px 0;
+    }
+    .zone.fullscreen .lot {
+      font-size: 0.85rem;
+      padding: 7px 9px;
+      border-left-width: 4px;
+    }
+    .zone.fullscreen .lot-num {
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+    .zone.fullscreen .lot-produit {
+      font-size: 0.78rem;
+      white-space: normal;       /* en plein écran, on peut wrap le produit */
+    }
+    .zone.fullscreen .prep-content {
+      padding: 62px 12px 12px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+      gap: 6px;
+    }
+    .zone.fullscreen .prep-content .lot { min-height: 56px; }
+
+    /* Overlay opaque derrière la zone fullscreen */
+    body.has-fullscreen::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(43, 36, 24, 0.55);
+      z-index: 35;
+      animation: fs-zoom-in 0.22s ease-out;
+    }
+
+    /* Grille des allées au sein d'une zone — padding-top suffisant
+       pour ne pas être recouverte par le bandeau du nom de zone. */
+    .allees {
+      display: grid;
+      gap: 2px;
+      padding: 34px 4px 4px 4px;
+      flex: 1;
+    }
+    .zone-A .allees { grid-template-columns: repeat(17, 1fr); }
+    .zone-B .allees { grid-template-columns: repeat(20, 1fr); }
+    .zone-C .allees { grid-template-columns: repeat(15, 1fr); }
+
+    /* Zones sans allées numérotées (Prépa commande, Tampon) : grille libre de cards */
+    .zone-PREP .prep-content,
+    .zone-TAMPON .prep-content {
+      flex: 1;
+      padding: 38px 6px 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 3px;
+      align-content: start;
+    }
+    .zone-TAMPON .prep-content {
+      /* Zone tampon plus étroite, cards plus serrées */
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      padding: 38px 3px 3px;
+    }
+    .zone-PREP .lot, .zone-TAMPON .lot {
+      min-height: 38px;
+    }
+
+    /* Une allée */
+    .allee {
+      display: flex;
+      flex-direction: column;
+      background: rgba(255,255,255,0.45);
+      border: 1px solid var(--allee-border);
+      border-radius: 3px;
+      min-height: 220px;
+      overflow: hidden;
+    }
+    .allee.vide {
+      background: var(--allee-empty);
+      opacity: 0.55;
+    }
+    .allee-header {
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 2px 0;
+      background: var(--allee-header-bg);
+      color: #4a3e29;
+      letter-spacing: 0.04em;
+    }
+    .allee-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 3px 2px;
+    }
+
+    /* Carte lot */
+    .lot {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-left-width: 3px;
+      border-radius: 2px;
+      padding: 3px 4px;
+      font-size: 0.58rem;
+      line-height: 1.25;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.1s;
+    }
+    .lot:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .lot.statut-Trié          { border-left-color: var(--statut-trie); }
+    .lot.statut-Brut          { border-left-color: var(--statut-brut); }
+    .lot.statut-Non-affecté   { border-left-color: var(--statut-nonaffecte); }
+    .lot.statut-Trié-et-stocké { border-left-color: var(--statut-triestocke); }
+    .lot.statut-A-retrier     { border-left-color: var(--statut-aretrier); }
+    .lot-num {
+      font-weight: 700;
+      font-size: 0.62rem;
+      color: #2b2418;
+      word-break: break-all;  /* coupe au besoin pour passer sur plusieurs lignes */
+      line-height: 1.15;
+    }
+    .lot-produit {
+      color: #555;
+      font-size: 0.56rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Badge "Caisson N°X" sur les cartes lot.
+       Caché en vue globale (trop chargé) — visible uniquement en fullscreen
+       et toujours dans la modal d'édition. */
+    .lot-caissons {
+      margin-top: 3px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+    .zone.fullscreen .lot-caissons {
+      display: inline-flex;
+    }
+    .lot-caisson-tag {
+      font-size: 0.5rem;
+      padding: 1px 5px;
+      background: #463a28;
+      color: #f5f1ea;
+      border-radius: 8px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    .zone.fullscreen .lot-caisson-tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+    }
+
+    /* Highlight : un lot multi-emplacements survolé */
+    .lot.highlight {
+      background: var(--highlight) !important;
+      border-color: var(--highlight-border) !important;
+      box-shadow: 0 0 0 2px var(--highlight-border);
+      z-index: 2;
+    }
+
+    /* Pied de page */
+    .footer-note {
+      margin: 4px 18px 16px;
+      font-size: 0.72rem;
+      color: #7a6a52;
+      font-style: italic;
+    }
+    .footer-note strong { color: #4a3e29; font-style: normal; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div>
+      <h1>Interface Hangar — SCIC Graines équitables</h1>
+      <span class="subtitle">Maquette HTML v1 · données réelles (emplacements + statuts + produits Airtable) · lots Epuisé exclus</span>
+    </div>
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+      <div class="search-bar">
+        <div class="search-wrap">
+          <input
+            id="search-input"
+            placeholder="🔍  Produit ou N°lot…"
+            autocomplete="off"
+          />
+          <div id="search-suggestions" class="search-suggestions hidden"></div>
+        </div>
+        <button id="search-clear" title="Effacer">✕</button>
+      </div>
+      <button id="allotement-toggle" class="allotement-toggle" title="Suggestions d'allotements — regrouper les lots compatibles">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 17l-4-4 4-4"/>
+          <path d="M3 13h12"/>
+          <path d="M17 7l4 4-4 4"/>
+          <path d="M21 11H9"/>
+        </svg>
+        <span>Allotements</span>
+      </button>
+      <div class="legend" id="legend">
+        <span class="legend-item clickable" data-statut="Trié"><span class="legend-dot" style="background: var(--statut-trie)"></span> Trié</span>
+        <span class="legend-item clickable" data-statut="Brut"><span class="legend-dot" style="background: var(--statut-brut)"></span> Brut</span>
+        <span class="legend-item clickable" data-statut="A retrier"><span class="legend-dot" style="background: var(--statut-aretrier)"></span> À retrier</span>
+        <span class="legend-item clickable" data-statut="Trié et stocké"><span class="legend-dot" style="background: var(--statut-triestocke)"></span> Trié et stocké</span>
+        <span class="legend-item" style="margin-left:6px"><span class="legend-dot" style="background: var(--highlight); border:1px solid var(--highlight-border)"></span> survol</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="hangar" id="hangar">
+<div class="rang-haut">
+      <section class="zone zone-A" id="zone-A">
+        <span class="zone-label">ZONE A
+          <button class="fs-toggle" data-fs="zone-A" title="Plein écran">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 9 4 4 9 4"></polyline>
+              <polyline points="20 9 20 4 15 4"></polyline>
+              <polyline points="4 15 4 20 9 20"></polyline>
+              <polyline points="20 15 20 20 15 20"></polyline>
+            </svg>
+          </button>
+        </span>
+        <div class="allees" id="allees-A"></div>
+      </section>
+      <div class="passage-vertical">passage</div>
+      <section class="zone zone-PREP" id="zone-PREP">
+        <span class="zone-label">ZONE PRÉPARATION COMMANDE
+          <button class="fs-toggle" data-fs="zone-PREP" title="Plein écran">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 9 4 4 9 4"></polyline>
+              <polyline points="20 9 20 4 15 4"></polyline>
+              <polyline points="4 15 4 20 9 20"></polyline>
+              <polyline points="20 15 20 20 15 20"></polyline>
+            </svg>
+          </button>
+        </span>
+        <div class="prep-content" id="prep-content"></div>
+      </section>
+    </div>
+    <div class="allee-passage">— allée de passage —</div>
+    <div class="rang-bas">
+      <section class="zone zone-C" id="zone-C">
+        <span class="zone-label">ZONE C
+          <button class="fs-toggle" data-fs="zone-C" title="Plein écran">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 9 4 4 9 4"></polyline>
+              <polyline points="20 9 20 4 15 4"></polyline>
+              <polyline points="4 15 4 20 9 20"></polyline>
+              <polyline points="20 15 20 20 15 20"></polyline>
+            </svg>
+          </button>
+        </span>
+        <div class="allees" id="allees-C"></div>
+      </section>
+      <section class="zone zone-TAMPON" id="zone-TAMPON">
+        <span class="zone-label">TAMPON
+          <button class="fs-toggle" data-fs="zone-TAMPON" title="Plein écran">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 9 4 4 9 4"></polyline>
+              <polyline points="20 9 20 4 15 4"></polyline>
+              <polyline points="4 15 4 20 9 20"></polyline>
+              <polyline points="20 15 20 20 15 20"></polyline>
+            </svg>
+          </button>
+        </span>
+        <div class="prep-content" id="tampon-content"></div>
+      </section>
+      <section class="zone zone-B" id="zone-B">
+        <span class="zone-label">ZONE B
+          <button class="fs-toggle" data-fs="zone-B" title="Plein écran">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 9 4 4 9 4"></polyline>
+              <polyline points="20 9 20 4 15 4"></polyline>
+              <polyline points="4 15 4 20 9 20"></polyline>
+              <polyline points="20 15 20 20 15 20"></polyline>
+            </svg>
+          </button>
+        </span>
+        <div class="allees" id="allees-B"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       Modal d'édition du lot — ouverte au clic sur une portion de lot.
+       Tailwind. Les champs sont des inputs éditables (préparation pour
+       la future écriture vers Airtable). "Valider" n'écrit pas encore.
+       ============================================================ -->
+  <div id="lot-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+       aria-hidden="true">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+         role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+      <!-- Entête -->
+      <div class="flex items-start justify-between p-5 border-b border-stone-200">
+        <div>
+          <h2 id="modal-title" class="text-xl font-semibold text-stone-900">
+            Lot <span id="modal-lot-num" class="font-mono"></span>
+          </h2>
+          <p id="modal-lot-produit" class="text-sm text-stone-500 mt-0.5"></p>
+        </div>
+        <button id="modal-close"
+                class="text-stone-400 hover:text-stone-700 text-2xl leading-none px-2"
+                aria-label="Fermer">×</button>
+      </div>
+
+      <!-- Corps : champs éditables -->
+      <form id="modal-form" class="p-5 space-y-4" onsubmit="return false;">
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">N° de lot</label>
+          <input id="f-lot" type="text"
+                 class="w-full font-mono px-3 py-2 border border-stone-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"/>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">Produit</label>
+          <input id="f-produit" type="text"
+                 class="w-full px-3 py-2 border border-stone-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"/>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">Statut triage</label>
+            <select id="f-statut"
+                    class="w-full px-3 py-2 border border-stone-300 rounded-md bg-white
+                           focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400">
+              <option>Brut</option>
+              <option>Trié</option>
+              <option>Trié et stocké</option>
+              <option>A retrier</option>
+              <option>Non affecté</option>
+              <option>Epuisé</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">Bio / C2</label>
+            <select id="f-bioc2"
+                    class="w-full px-3 py-2 border border-stone-300 rounded-md bg-white
+                           focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400">
+              <option>Bio</option>
+              <option>C2</option>
+              <option>—</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">
+            Emplacement(s) actuel(s)
+          </label>
+          <div id="f-emplacements"
+               class="flex flex-wrap gap-1.5 min-h-[2.25rem] px-2 py-1.5
+                      border border-stone-300 rounded-md bg-stone-50"></div>
+          <p class="text-xs text-stone-400 mt-1">
+            Édition multi-emplacements : à concevoir dans la V suivante (drag/tap to move).
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">
+            Caisson(s) métallique(s)
+          </label>
+          <div id="f-caissons"
+               class="flex flex-wrap gap-1.5 min-h-[2.25rem] px-2 py-1.5
+                      border border-stone-300 rounded-md bg-stone-50"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">Campagne</label>
+            <input id="f-campagne" type="text" placeholder="2025"
+                   class="w-full px-3 py-2 border border-stone-300 rounded-md
+                          focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">Poids net (kg)</label>
+            <input id="f-poids" type="number" placeholder="— (à brancher)"
+                   class="w-full px-3 py-2 border border-stone-300 rounded-md
+                          focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"/>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">Commentaire</label>
+          <textarea id="f-commentaire" rows="2" placeholder="—"
+                    class="w-full px-3 py-2 border border-stone-300 rounded-md resize-none
+                           focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"></textarea>
+        </div>
+
+      </form>
+
+      <!-- Pied -->
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-stone-200 bg-stone-50 rounded-b-xl">
+        <button id="modal-cancel"
+                class="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200 rounded-md">
+          Annuler
+        </button>
+        <button id="modal-save"
+                class="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md shadow-sm">
+          Valider
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Modal "Ajouter un lot" — ouverte au clic sur un placeholder "+".
+       Typeahead pour choisir un lot existant (non épuisé), preview de ses infos,
+       puis ajout à l'emplacement cible. Pas d'écriture Airtable encore.
+       ============================================================ -->
+  <div id="add-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+      <div class="flex items-start justify-between p-5 border-b border-stone-200">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">
+            Ajouter un lot en <span id="add-target-empl" class="font-mono text-amber-700"></span>
+          </h2>
+          <p class="text-sm text-stone-500 mt-0.5">Choisir un lot existant (non épuisé) à ajouter à cet emplacement.</p>
+        </div>
+        <button id="add-modal-close"
+                class="text-stone-400 hover:text-stone-700 text-2xl leading-none px-2">×</button>
+      </div>
+
+      <form class="p-5 space-y-4" onsubmit="return false;">
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">N° de lot</label>
+          <div class="relative">
+            <input id="add-lot-input" type="text"
+                   placeholder="🔍 Tapez un N°lot ou un produit…"
+                   autocomplete="off"
+                   class="w-full font-mono px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"/>
+            <div id="add-lot-suggestions"
+                 class="hidden absolute top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-stone-300 rounded-lg shadow-xl z-50"></div>
+          </div>
+        </div>
+
+        <!-- Carte d'infos du lot — hauteur constante pour stabilité visuelle -->
+        <div class="bg-stone-50 border border-stone-200 rounded-md p-3 min-h-[185px] flex">
+          <!-- État vide : placeholder visible tant qu'aucun lot n'est sélectionné -->
+          <div id="add-lot-placeholder" class="flex-1 flex flex-col items-center justify-center text-stone-400 text-sm italic gap-2">
+            <svg class="w-8 h-8 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 9h6M9 13h6M9 17h4" stroke-linecap="round"/>
+            </svg>
+            <span>Choisissez un lot ci-dessus pour voir ses informations</span>
+          </div>
+          <!-- État rempli : infos du lot sélectionné -->
+          <div id="add-lot-info" class="hidden flex-1 space-y-3">
+            <div>
+              <div class="text-xs text-stone-500 uppercase tracking-wide">Produit</div>
+              <div id="add-info-produit" class="text-sm font-medium text-stone-800 mt-0.5"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-xs text-stone-500 uppercase tracking-wide">Statut triage</div>
+                <div id="add-info-statut" class="text-sm text-stone-800 mt-0.5"></div>
+              </div>
+              <div>
+                <div class="text-xs text-stone-500 uppercase tracking-wide">Autres emplacements</div>
+                <div id="add-info-empls" class="text-sm text-stone-800 mt-0.5"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-stone-500 uppercase tracking-wide">Caissons</div>
+              <div id="add-info-caissons" class="flex flex-wrap gap-1 mt-1"></div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-stone-200 bg-stone-50 rounded-b-xl">
+        <button id="add-modal-cancel"
+                class="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200 rounded-md">Annuler</button>
+        <button id="add-modal-confirm" disabled
+                class="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Modal de confirmation de déplacement — ouverte après drop.
+       Contenu adaptatif (mono/multi-emplacement, fusion ou pas).
+       ============================================================ -->
+  <div id="move-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+      <div class="p-5 border-b border-stone-200">
+        <h2 class="text-lg font-semibold text-stone-900">Confirmer le déplacement</h2>
+        <p id="move-modal-subtitle" class="text-sm text-stone-500 mt-0.5"></p>
+      </div>
+      <div id="move-modal-body" class="p-5 space-y-3"></div>
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-stone-200 bg-stone-50 rounded-b-xl">
+        <button id="move-cancel"
+                class="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200 rounded-md">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Vue : <strong>Zone A</strong> à gauche en haut (A17→A01) + <strong>Zone préparation commande</strong> à droite en haut ;
+    <strong>Zone C</strong> (C1→C15) à gauche en bas + <strong>Tampon</strong> au milieu + <strong>Zone B</strong> (B20→B01) à droite en bas.
+    <strong>Vraies données Airtable</strong> (emplacements, statut triage, produit) · les lots au statut <em>Epuisé</em> sont exclus de l'affichage (~119 lots filtrés sur 280 placés).
+    Survoler un lot multi-emplacements pour voir ses autres portions (ex. <em>23-079</em>).
+  </p>
+
+  <script>
+    /* ============================================================
+       DONNÉES — vraies allées et N°lots extraits d'Airtable (2026-05-20)
+       ============================================================ */
+    const EMPLACEMENTS = /* injecté ci-dessous */ [{"name":"A01","zone":"A","allee":"01","lots":["25-214"]},{"name":"A02","zone":"A","allee":"02","lots":["24-173-RG","25-214"]},{"name":"A03","zone":"A","allee":"03","lots":["24-173-RG","24-173-RG-1"]},{"name":"A04","zone":"A","allee":"04","lots":["23-246","23-169-1","25-155-M","22-250-1","25-159-M"]},{"name":"A05","zone":"A","allee":"05","lots":["24-022-EV","25-159-M","25-AL-108-MOULIN","23-169-1-D","25-239"]},{"name":"A06","zone":"A","allee":"06","lots":["25-AL-139"]},{"name":"A07","zone":"A","allee":"07","lots":["25-079","25-085-SCURO","25-055-SCURO","25-052","25-AL-116-EV","25-AL-097-EV","25-AL-139"]},{"name":"A08","zone":"A","allee":"08","lots":["25-055-SCURO","25-085-SCURO","25-110-TREFLE","AL-088","AL-095-EV","AL-058-EV","25-030","23-076-25kg"]},{"name":"A09","zone":"A","allee":"09","lots":["25-106"]},{"name":"A10","zone":"A","allee":"10","lots":["25-106"]},{"name":"A11","zone":"A","allee":"11","lots":["AL-008-1","AL-070-AA","24-002-AA","25-212","25-213","25-159-AA","25-095-AA","25-AL-108-AA","25-AL-149-AA","25-162-AA"]},{"name":"A12","zone":"A","allee":"12","lots":["25-098","25-AL-147-AA","25-148-AA","25-047-AA","25-111-AA","25-052-AA"]},{"name":"A13","zone":"A","allee":"13","lots":["25-153","25-AL-108-MOULIN"]},{"name":"A14","zone":"A","allee":"14","lots":["24-132","25-178","25-129","24-020-1","25-166","24-022","24-100","25-004"]},{"name":"A15","zone":"A","allee":"15","lots":["24-078-2","24-032","22-101","23-169","25-066-AA","25-157-AA","25-129-AA","25-213","25-173"]},{"name":"A16","zone":"A","allee":"16","lots":["24-095","23-354","AL-028-EV","25-053","23-321-D","23-169-2","25-219","24-055-2"]},{"name":"A17","zone":"A","allee":"17","lots":["24-020","25-175","23-077","24-090"]},{"name":"B01","zone":"B","allee":"01","lots":["24-059","24-065","25-104"]},{"name":"B02","zone":"B","allee":"02","lots":["23-076","23-079","23-170-1","24-002","25-104","25-AL-113-EV","AL-084"]},{"name":"B03","zone":"B","allee":"03","lots":["22-095","23-102-EV","22-216","24-159-1","22-074-B18","AL-085","23-079","25-AL-124","AL-084","22-105","25-AL-104-GG","AL-058-EV","23-366","25-076-EV ","22-323"]},{"name":"B04","zone":"B","allee":"04","lots":["22-095","22-216","23-136","24-070","23-079","22-114","AL-036","23-203","AL-086","AL-093","AL-094","25-096-EV","24-090-1","23-366","AL-092","25-158-EV","25-158-EV ","25-162-EV","25-161-EV ","23-169-EV","25-101-CAMELINE-EV","25-AL-152-EV "]},{"name":"B05","zone":"B","allee":"05","lots":["24-013-2","AL-020-1","23-154-1","AL-024","AL-059","21-230","23-169-1","23-321","AL-089","25-076","25-065","25-173-EV ","25-108-EV","21-065","AL-095"]},{"name":"B06","zone":"B","allee":"06","lots":["24-016","24-086","24-173-EV","AL-059","23-079","24-094","AL-090","24-070","23-366","25-065-EV","25-AL-102","24-002","25-076","AL-091","25-157","25-192","25-153","23-079","25-208"]},{"name":"B07","zone":"B","allee":"07","lots":["23-207-1","23-341-1","AL-059","23-064","23-079","23-169-1","22-095-B2","23-366","AL-075","23-243-2","25-076"]},{"name":"B08","zone":"B","allee":"08","lots":["AL-032-1","22-050-D","23-003","23-157","22-050","24-027","AL-087","23-007-EV","21-065","25-AL-156-AA"]},{"name":"B09","zone":"B","allee":"09","lots":["25-158-AA","25-AL-151-AA","25-AL-169-D-QA"]},{"name":"B10","zone":"B","allee":"10","lots":[]},{"name":"B11","zone":"B","allee":"11","lots":["AL-042-D","24-092","24-007-EV","25-218","25-101-LENTILLES","25-101-CAMELINE","25-AL-104-PG","25-AL-104-PG-EV"]},{"name":"B12","zone":"B","allee":"12","lots":["23-246-D","AL-056","25-223","25-136","25-105"]},{"name":"B13","zone":"B","allee":"13","lots":["24-173","23-169-1","24-165","25-131-Lentilles","25-088-CAMELINE","25-096","22-316-D"]},{"name":"B14","zone":"B","allee":"14","lots":["24-104","25-088-LENTILLES","25-088","25-112","25-131-Lentilles"]},{"name":"B15","zone":"B","allee":"15","lots":["24-017-2","25-110-MOULIN","25-156","25-108","25-155-GG","25-174","25-161","25-088-CAMELINE"]},{"name":"B16","zone":"B","allee":"16","lots":["25-122","25-AL-127","25-065","25-150","24-120-2","22-323","25-AL-109"]},{"name":"B17","zone":"B","allee":"17","lots":["25-122","24-173-RG-1","AL-002-M","24-007","25-AL-127","25-155-PG ","23-079","25-AL-096","23-016"]},{"name":"B18","zone":"B","allee":"18","lots":["24-006","25-207","25-066"]},{"name":"B19","zone":"B","allee":"19","lots":["25-011","AL-002-M","25-AL-108","25-AL-129","25-162","23-078-EV","25-234"]},{"name":"B20","zone":"B","allee":"20","lots":["25-157"]},{"name":"B21","zone":"B","allee":"21","lots":[]},{"name":"B22","zone":"B","allee":"22","lots":[]},{"name":"B23","zone":"B","allee":"23","lots":[]},{"name":"B24","zone":"B","allee":"24","lots":[]},{"name":"B25","zone":"B","allee":"25","lots":[]},{"name":"B26","zone":"B","allee":"26","lots":[]},{"name":"B27","zone":"B","allee":"27","lots":[]},{"name":"B28","zone":"B","allee":"28","lots":[]},{"name":"B29","zone":"B","allee":"29","lots":[]},{"name":"B30","zone":"B","allee":"30","lots":[]},{"name":"C1","zone":"C","allee":"1","lots":["25-005","25-054"]},{"name":"C2","zone":"C","allee":"2","lots":["25-009","25-029-BLE ","25-004"]},{"name":"C3","zone":"C","allee":"3","lots":["25-221"]},{"name":"C4","zone":"C","allee":"4","lots":["25-AL-129"]},{"name":"C5","zone":"C","allee":"5","lots":[]},{"name":"C6","zone":"C","allee":"6","lots":["25-047","25-111","25-095"]},{"name":"C7","zone":"C","allee":"7","lots":["25-095-AA","25-168-AA","25-216-AA","25-211-AA","25-AL-142-AA","AL-074","25-AL-109-AA"]},{"name":"C8","zone":"C","allee":"8","lots":["25-158"]},{"name":"C9","zone":"C","allee":"9","lots":["25-172","25-182","25-163","25-163-Amidonnier","25-163-Lentilles"]},{"name":"C10","zone":"C","allee":"10","lots":["25-069"]},{"name":"C11","zone":"C","allee":"11","lots":["25-076"]},{"name":"C12","zone":"C","allee":"12","lots":["AL-002","25-186"]},{"name":"C13","zone":"C","allee":"13","lots":["25-211","25-216-SCURO","25-168-SCURO","25-193","25-165-EV","25-183"]},{"name":"C14","zone":"C","allee":"14","lots":["25-AL-109","25-211"]},{"name":"C15","zone":"C","allee":"15","lots":["25-177-EV","AL-096","25-AL-125","25-031","25-179","25-204"]},{"name":"C16","zone":"C","allee":"16","lots":[]},{"name":"C17","zone":"C","allee":"17","lots":[]},{"name":"C18","zone":"C","allee":"18","lots":[]},{"name":"C19","zone":"C","allee":"19","lots":[]},{"name":"C20","zone":"C","allee":"20","lots":[]},{"name":"C21","zone":"C","allee":"21","lots":[]},{"name":"C22","zone":"C","allee":"22","lots":[]},{"name":"C23","zone":"C","allee":"23","lots":[]},{"name":"C24","zone":"C","allee":"24","lots":[]},{"name":"C25","zone":"C","allee":"25","lots":[]},{"name":"C26","zone":"C","allee":"26","lots":[]},{"name":"C27","zone":"C","allee":"27","lots":[]},{"name":"C28","zone":"C","allee":"28","lots":[]},{"name":"C29","zone":"C","allee":"29","lots":[]},{"name":"C30","zone":"C","allee":"30","lots":[]}];
+
+    /* Métadonnées réelles des lots placés (Statut triage + Produit) extraites d'Airtable */
+    const LOTS_META = {"25-AL-102":{"statut":"Trié","produit":"Méteil 1 Biologique - EV","caissons":[],"allot":null},"25-AL-115-EV":{"statut":"Epuisé","produit":"Sainfoin Biologique - EV","caissons":[],"allot":null},"25-159-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":["98","56"],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"25-104":{"statut":"Brut","produit":"Coriandre Biologique","caissons":[],"allot":"CORIANDRE - Coriandre Biologique-"},"23-136":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique (variété : Rota)","caissons":[],"allot":null},"25-AL-116-EV":{"statut":"Trié","produit":"Mélange Tardif eté/automne Biologique - EV","caissons":[],"allot":"ART0548 - Mélange Tardif eté/automne Biologique - EV-Engrais verts"},"25-014-TREFLE":{"statut":"Trié","produit":"Trèfle Squarrosum Biologique","caissons":[],"allot":null},"23-169-EV":{"statut":"Trié","produit":"Amidonnier Biologique","caissons":[],"allot":"ART0243 - Amidonnier Biologique-Engrais verts"},"24-033":{"statut":"Epuisé","produit":"Blé Tendre Moderne Biologique","caissons":[],"allot":null},"23-054-EV":{"statut":"Epuisé","produit":"Moutarde Blanche C2 - 25 kg - EV","caissons":[],"allot":null},"AL-087":{"statut":"Trié","produit":"Luzerne Biologique","caissons":[],"allot":null},"24-046":{"statut":"Trié","produit":"Féverole \"Gros PMG\" Biologique - EV","caissons":[],"allot":"\"ART0512 - Féverole \"\"Gros PMG\"\" Biologique - EV\"-"},"25-153":{"statut":"Trié","produit":"Pois Carré Biologique ","caissons":[],"allot":"ART0051 - Pois Carré Biologique -"},"25-108":{"statut":"Trié","produit":"Lin Brun Biologique","caissons":[],"allot":"ART0129 - Lin Brun Biologique-Alimentation humaine"},"24-020":{"statut":"Trié","produit":"Avoine Noire Biologique","caissons":[],"allot":"ART0025 - Avoine Noire Biologique-"},"23-007-EV":{"statut":"Epuisé","produit":"Ray-Grass Sauvage Biologique - EV","caissons":[],"allot":null},"25-055-SCURO":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":[],"allot":null},"AL-028-EV":{"statut":"Trié","produit":"Méteil 1 Biologique - EV","caissons":[],"allot":"ART0714 - Méteil 1 Biologique - EV-Engrais verts"},"24-007":{"statut":"Trié","produit":"Moutarde Blanche Biologique (variété : Rota)","caissons":[],"allot":"ART0155 - Moutarde Blanche Biologique (variété : Rota)-Alimentation humaine"},"23-078-EV":{"statut":"Trié","produit":"Pois Vert Biologique (variété : Paddle)","caissons":[],"allot":"ART0262 - Pois Vert Biologique (variété : Paddle)-Engrais verts"},"25-054":{"statut":"Epuisé","produit":"Blé Tendre Population Biologique (variété : Rouge de Bordeaux)","caissons":["77","66","75","65","57","53","62"],"allot":null},"AL-095-EV":{"statut":"Trié","produit":"Sorgho Biologique - 25 kg - EV","caissons":[],"allot":"ART0643 - Sorgho Biologique - 25 kg - EV-Engrais verts"},"25-192":{"statut":"Trié","produit":"Tournesol Linoléique Biologique","caissons":[],"allot":"ART0162 - Tournesol Linoléique Biologique-"},"24-022":{"statut":"Trié","produit":"Coriandre Biologique","caissons":[],"allot":"CORIANDRE - Coriandre Biologique-"},"25-106":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique","caissons":[],"allot":null},"25-047-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":[],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"25-129":{"statut":"Trié","produit":"Gesse D'Espagne C2","caissons":[],"allot":"ART0779 - Gesse D'Espagne C2-Semences"},"22-095-B2":{"statut":"Epuisé","produit":"Colza Biologique","caissons":[],"allot":null},"25-AL-096":{"statut":"Trié","produit":"Moutarde Brune Biologique","caissons":[],"allot":"ART0156 - Moutarde Brune Biologique-Alimentation humaine"},"25-079":{"statut":"Epuisé","produit":"Blé tendre moderne - Féveroles bio","caissons":[],"allot":null},"23-157":{"statut":"Epuisé","produit":"Luzerne Biologique","caissons":[],"allot":null},"25-208":{"statut":"Trié","produit":"Blé Dur : semences certifiées \"DANUBE\"","caissons":[],"allot":"\"ART0808 - Blé Dur : semences certifiées \"\"DANUBE\"\"\"-"},"24-022-EV":{"statut":"Epuisé","produit":"Mélange Précoce Biologique - 25 kg - EV","caissons":[],"allot":null},"23-077":{"statut":"Trié","produit":"Moutarde Brune Biologique","caissons":[],"allot":"ART0156 - Moutarde Brune Biologique-"},"25-162-AA":{"statut":"Trié","produit":"Écart de triage Lin Biologique","caissons":[],"allot":"art0847 - Écart de triage Lin Biologique-"},"AL-094":{"statut":"Epuisé","produit":"Radis Fourrager Biologique - EV","caissons":[],"allot":null},"23-087-1":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique (variété : Rota)","caissons":[],"allot":null},"25-205":{"statut":"Trié","produit":"Sainfoin Biologique","caissons":[],"allot":"ART0031 - Sainfoin Biologique-"},"25-095-AA":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":["237","82","235","47"],"allot":null},"25-030":{"statut":"Epuisé","produit":"Blé tendre : semences fermière \"Constellum\"","caissons":[],"allot":null},"25-155-M":{"statut":"Trié","produit":"Pois Carré Biologique ","caissons":[],"allot":"ART0051 - Pois Carré Biologique -Alimentation humaine"},"AL-075":{"statut":"Trié","produit":"Avoine Blanche Biologique - EV","caissons":[],"allot":null},"AL-059":{"statut":"Epuisé","produit":"Luzerne Biologique","caissons":[],"allot":null},"23-064":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique (variété : Rota)","caissons":[],"allot":null},"25-AL-113-EV":{"statut":"Trié","produit":"Mélange Précoce Biologique - EV","caissons":[],"allot":"ART0547 - Mélange Précoce Biologique - EV-Engrais verts"},"24-100":{"statut":"Trié","produit":"Aneth Biologique","caissons":[],"allot":"ART0710 - Aneth Biologique-"},"24-008-EV":{"statut":"Trié","produit":"Sainfoin Biologique - 12,5 kg - EV","caissons":[],"allot":"\"ART0633 - Sainfoin Biologique - 12,5 kg - EV\"-Engrais verts"},"25-155-PG ":{"statut":"Trié","produit":"Pois Carré Biologique ","caissons":[],"allot":"ART0051 - Pois Carré Biologique -Engrais verts"},"22-105":{"statut":"Trié","produit":"Carthame Biologique","caissons":[],"allot":"ART0037 - Carthame Biologique-"},"25-052":{"statut":"Trié","produit":"Pois Chiches Noir Biologique","caissons":[],"allot":"ART0365 - Pois Chiches Noir Biologique-"},"25-101-CAMELINE-EV":{"statut":"Trié","produit":"Caméline Biologique - EV","caissons":[],"allot":"ART0509 - Caméline Biologique - EV-"},"25-211":{"statut":"Brut","produit":"Féverole Biologique (variété : Scuro)","caissons":["59","52","15"],"allot":"ART0160 - Féverole Biologique (variété : Scuro)-"},"24-090":{"statut":"Epuisé","produit":"Pois Chiche Noir Biologique - 25 kg","caissons":[],"allot":null},"22-316-D":{"statut":"Trié","produit":"Pois Carré Petits Grains Biologique Décortiqué ","caissons":[],"allot":"ART0762 - Pois Carré Petits Grains Biologique Décortiqué -"},"24-065":{"statut":"Trié","produit":"Coriandre C2","caissons":[],"allot":"ART0363 - Coriandre C2-"},"AL-024":{"statut":"Epuisé","produit":"Lentilles Vertes Biologique","caissons":[],"allot":null},"23-246":{"statut":"Epuisé","produit":"Pois Chiches Noir Biologique","caissons":[],"allot":null},"25-158-EV ":{"statut":"Trié","produit":"Lin Brun Biologique - EV","caissons":[],"allot":"ART0516 - Lin Brun Biologique - EV-"},"23-341-1":{"statut":"Epuisé","produit":"Cameline Biologique","caissons":[],"allot":null},"23-354":{"statut":"Trié","produit":"Haricots Mungo Biologique","caissons":[],"allot":"ART0366 - Haricots Mungo Biologique-"},"25-179":{"statut":"Epuisé","produit":"Luzerne Biologique","caissons":["141"],"allot":null},"24-002":{"statut":"Trié","produit":"Pois Jaune Biologique (variété : Orchestra)","caissons":[],"allot":"ART0682 - Pois Jaune Biologique (variété : Orchestra)-"},"24-120-2":{"statut":"Brut","produit":"Millet","caissons":[],"allot":"ART0401 - Millet-"},"AL-092":{"statut":"Trié","produit":"Fenugrec Biologique - EV","caissons":[],"allot":"ART0511 - Fenugrec Biologique - EV-Engrais verts"},"25-175":{"statut":"Brut","produit":"Pois Chiche Blanc Biologique","caissons":[],"allot":"ART0070 - Pois Chiche Blanc Biologique-"},"25-AL-108-MOULIN":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":["30","204"],"allot":null},"22-250-1":{"statut":"Trié","produit":"Lentilles Vertes Biologique - 25 kg - EV","caissons":[],"allot":"ART0585 - Lentilles Vertes Biologique - 25 kg - EV-Engrais verts"},"25-112":{"statut":"Trié","produit":"Lentilles Vertes Biologique","caissons":[],"allot":"ART0039 - Lentilles Vertes Biologique-Alimentation humaine"},"AL-036":{"statut":"Epuisé","produit":"Sorgho Blanc Biologique ","caissons":[],"allot":null},"24-173":{"statut":"Epuisé","produit":"Lin Doré Biologique","caissons":[],"allot":null},"25-174":{"statut":"Brut","produit":"Lentilles Vertes Biologique","caissons":["18"],"allot":"ART0039 - Lentilles Vertes Biologique-"},"23-243-2-ENV":{"statut":"Trié","produit":"Pois Carré Biologique - 5 kg","caissons":[],"allot":null},"24-165":{"statut":"Epuisé","produit":"Haricots Blanc Biologique : type \"Mogette\"","caissons":[],"allot":null},"AL-074":{"statut":"Trié","produit":"Féverole Biologique","caissons":[],"allot":"ART0021 - Féverole Biologique-"},"23-003":{"statut":"Epuisé","produit":"Trèfle Squarrosum Biologique","caissons":[],"allot":null},"AL-042-D":{"statut":"Epuisé","produit":"Petit épeautre Décortiqué Biologique","caissons":[],"allot":null},"25-165-EV":{"statut":"Epuisé","produit":"Petit Epeautre Biologique - EV","caissons":["88"],"allot":null},"25-096":{"statut":"Trié","produit":"Lin Doré Biologique","caissons":[],"allot":"ART0145 - Lin Doré Biologique-Alimentation humaine"},"23-366":{"statut":"Trié","produit":"Sarrasin Biologique (variété : La Harpe)","caissons":[],"allot":"ART0146 - Sarrasin Biologique (variété : La Harpe)-Engrais verts, Semences"},"24-032":{"statut":"Epuisé","produit":"Féverole Biologique","caissons":[],"allot":null},"25-218":{"statut":"Epuisé","produit":"Blé Tendre Population Biologique (variété : Bladette de Puylaurens)","caissons":[],"allot":null},"23-076-25kg":{"statut":"Trié","produit":"Moutarde Blanche C2 - 25 kg - EV","caissons":[],"allot":"ART0601 - Moutarde Blanche C2 - 25 kg - EV-Engrais verts"},"25-066":{"statut":"Trié","produit":"Pois Protéagineux Biologique","caissons":[],"allot":"ART0028 - Pois Protéagineux Biologique-Semences"},"AL-084":{"statut":"Trié","produit":"Moutarde Brune Biologique - EV","caissons":[],"allot":"ART0524 - Moutarde Brune Biologique - EV-Engrais verts"},"25-076-EV ":{"statut":"Trié","produit":"Fenugrec Biologique - EV","caissons":[],"allot":"ART0511 - Fenugrec Biologique - EV-"},"25-029-BLE ":{"statut":"Trié","produit":"Blé tendre : semences certifiées \"Wital\"","caissons":[],"allot":null},"24-170":{"statut":"Epuisé","produit":"Fenugrec Biologique","caissons":[],"allot":null},"23-141-EV":{"statut":"Trié","produit":"Lin Doré Biologique - 25 kg","caissons":[],"allot":"ART0324 - Lin Doré Biologique - 25 kg-"},"25-052-AA":{"statut":"Trié","produit":"Ecart de triage protéagineux bio","caissons":[],"allot":"ART0205 - Ecart de triage protéagineux bio-"},"25-110-TREFLE":{"statut":"A retrier","produit":"Trèfle Squarrosum Biologique","caissons":[],"allot":null},"22-050":{"statut":"Epuisé","produit":"Lentilles Roses Biologique","caissons":[],"allot":null},"25-AL-151-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":[],"allot":"ART0171 - Ecart de triage céréales bio-"},"25-AL-097-EV":{"statut":"Trié","produit":"Avoine Blanche Biologique - 20 kg - EV","caissons":[],"allot":"ART0549 - Avoine Blanche Biologique - 20 kg - EV-Engrais verts"},"25-AL-109":{"statut":"Trié","produit":"Orge d'hiver Biologique","caissons":["186","146","182","131"],"allot":"ART0064 - Orge d'hiver Biologique-Alimentation humaine"},"25-098":{"statut":"Trié","produit":"Avoine blanche Biologique","caissons":[],"allot":null},"24-007-EV":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique - EV","caissons":[],"allot":null},"AL-091":{"statut":"Trié","produit":"Colza Biologique - EV","caissons":[],"allot":"ART0510 - Colza Biologique - EV-Engrais verts"},"25-156":{"statut":"Brut","produit":"Lentilles Vertes Biologique","caissons":[],"allot":"ART0039 - Lentilles Vertes Biologique-"},"AL-085":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique - EV","caissons":[],"allot":null},"25-166":{"statut":"Trié","produit":"Luzerne Biologique","caissons":[],"allot":"ART0038 - Luzerne Biologique-Semences"},"25-143":{"statut":"Brut","produit":"Triticale Biologique","caissons":[],"allot":null},"25-150":{"statut":"Trié","produit":"Pois Carré Biologique ","caissons":[],"allot":"ART0051 - Pois Carré Biologique -"},"25-234":{"statut":"Trié","produit":"Lentilles Roses Biologique","caissons":[],"allot":"ART0269 - Lentilles Roses Biologique-"},"25-216-SCURO":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":["43","6","55"],"allot":null},"24-173-RG":{"statut":"Epuisé","produit":"Ray-Grass Biologique","caissons":[],"allot":null},"24-088":{"statut":"Epuisé","produit":"Vesce Commune Biologique","caissons":[],"allot":null},"24-090-1":{"statut":"Trié","produit":"Pois Chiches Noir Biologique","caissons":[],"allot":"ART0365 - Pois Chiches Noir Biologique-"},"25-173-EV ":{"statut":"Trié","produit":"Blé Tendre Population Biologique (variété : Touselle)","caissons":[],"allot":"ART0017 - Blé Tendre Population Biologique (variété : Touselle)-Engrais verts"},"AL-002-M":{"statut":"Trié","produit":"Blé Dur Biologique","caissons":[],"allot":"ART0132 - Blé Dur Biologique-"},"23-102-EV":{"statut":"Epuisé","produit":"Lin Doré Biologique - EV","caissons":[],"allot":null},"22-050-D":{"statut":"Epuisé","produit":"Lentilles Roses Biologique","caissons":[],"allot":null},"24-094":{"statut":"Epuisé","produit":"Seigle Biologique","caissons":[],"allot":null},"24-112":{"statut":"Epuisé","produit":"Luzerne Biologique - 25 kg - EV","caissons":[],"allot":null},"24-104":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":[],"allot":null},"25-131-Lentilles":{"statut":"A retrier","produit":"Lentilles Vertes Biologique","caissons":[],"allot":"ART0039 - Lentilles Vertes Biologique-"},"25-005":{"statut":"Epuisé","produit":"Sainfoin Biologique","caissons":["6","26","31","25","32"],"allot":null},"25-065-EV":{"statut":"Trié","produit":"Avoine Noire Biologique - EV","caissons":[],"allot":null},"25-219":{"statut":"Epuisé","produit":"Cameline Biologique","caissons":[],"allot":null},"25-AL-114":{"statut":"Epuisé","produit":"Sainfoin Biologique","caissons":[],"allot":null},"AL-073":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":[],"allot":null},"23-321-D":{"statut":"Trié","produit":"Petit épeautre Décortiqué Biologique","caissons":[],"allot":"ART0247 - Petit épeautre Décortiqué Biologique-Alimentation humaine"},"25-088-LENTILLES":{"statut":"Brut","produit":"Lentilles Vertes Biologique (variété : Anicia)","caissons":[],"allot":"ART0233 - Lentilles Vertes Biologique (variété : Anicia)-Alimentation humaine"},"25-AL-152-EV ":{"statut":"Trié","produit":"Petit Epeautre Biologique - 5 kg - EV","caissons":[],"allot":null},"22-095":{"statut":"Epuisé","produit":"Colza Biologique","caissons":[],"allot":null},"25-AL-142-AA":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":["101","33"],"allot":null},"24-060-1-EV":{"statut":"Epuisé","produit":"Avoine Blanche Biologique - 20 kg - EV","caissons":[],"allot":null},"25-AL-149-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":[],"allot":"ART0171 - Ecart de triage céréales bio-"},"AL-093":{"statut":"Trié","produit":"Caméline Biologique - EV","caissons":[],"allot":"ART0509 - Caméline Biologique - EV-Engrais verts"},"24-039-1-EV":{"statut":"Epuisé","produit":"Vesce Commune Biologique - 5 kg - EV","caissons":[],"allot":null},"22-101":{"statut":"Epuisé","produit":"Féverole Biologique","caissons":[],"allot":null},"24-006":{"statut":"Epuisé","produit":"Moutarde Brune Biologique","caissons":[],"allot":null},"25-014-Seigle":{"statut":"Trié","produit":"Seigle Forestier Biologique","caissons":[],"allot":null},"25-AL-169-D-QA":{"statut":"Trié","produit":"Petit épeautre Décortiqué Biologique","caissons":[],"allot":null},"AL-088":{"statut":"Trié","produit":"Trèfle Squarrosum Biologique","caissons":[],"allot":"ART299 - Trèfle Squarrosum Biologique-Engrais verts"},"25-095":{"statut":"Epuisé","produit":"Blé Dur Khorazan Biologique","caissons":["17","220","5","49","199","50","202","29"],"allot":null},"25-177-EV":{"statut":"Epuisé","produit":"Gesse d'Espagne Biologique","caissons":["118"],"allot":null},"25-AL-109-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":[],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"24-095":{"statut":"Trié","produit":"Coriandre Biologique","caissons":[],"allot":"CORIANDRE - Coriandre Biologique-"},"25-211-AA":{"statut":"Trié","produit":"Ecart de triage protéagineux bio","caissons":["89"],"allot":"ART0205 - Ecart de triage protéagineux bio-Alimentation animale"},"25-178":{"statut":"Brut","produit":"Blé Tendre Population Biologique (variété : Minervois)","caissons":[],"allot":null},"25-182":{"statut":"Brut","produit":"Tournesol Oléique Biologique","caissons":["176","234","160","213","178","120"],"allot":"ART0161 - Tournesol Oléique Biologique-"},"23-169-1-D":{"statut":"Trié","produit":"Lentilles Corail Biologique Décortiquées","caissons":[],"allot":"ART0747 - Lentilles Corail Biologique Décortiquées-"},"24-158":{"statut":"Epuisé","produit":"Avoine blanche Biologique","caissons":[],"allot":null},"25-223":{"statut":"Trié","produit":"Pois Chiche Rouge (variété OLGA)","caissons":[],"allot":null},"25-157":{"statut":"Trié","produit":"Pois Jaune Biologique (variété : Orchestra)","caissons":[],"allot":"ART0682 - Pois Jaune Biologique (variété : Orchestra)-Semences"},"25-065":{"statut":"Trié","produit":"Avoine Noire Biologique","caissons":[],"allot":"ART0025 - Avoine Noire Biologique-Semences"},"25-158":{"statut":"Epuisé","produit":"Lin Brun Biologique","caissons":["48","104","108","114","110","147","154","144","109","76","96"],"allot":null},"25-204":{"statut":"Brut","produit":"Carthame Biologique","caissons":["71"],"allot":"ART0037 - Carthame Biologique-"},"25-053":{"statut":"Brut","produit":"Pois Fourrager Biologique","caissons":[],"allot":"ART0175 - Pois Fourrager Biologique-"},"25-066-AA":{"statut":"Epuisé","produit":"Ecart de triage protéagineux bio","caissons":[],"allot":null},"25-047":{"statut":"Epuisé","produit":"Blé Dur Khorazan Biologique","caissons":["238","45","44","22"],"allot":null},"23-207-1":{"statut":"Epuisé","produit":"Cameline Biologique","caissons":[],"allot":null},"25-162-EV":{"statut":"Trié","produit":"Lin Brun Biologique - EV","caissons":[],"allot":"ART0516 - Lin Brun Biologique - EV-"},"25-AL-104-PG-EV":{"statut":"Trié","produit":"Féverole \"Petit PMG\" Biologique - 25 kg - EV","caissons":[],"allot":"\"ART0580 - Féverole \"\"Petit PMG\"\" Biologique - 25 kg - EV\"-Engrais verts"},"AL-032-1":{"statut":"Epuisé","produit":"Blé Tendre Moderne Biologique","caissons":[],"allot":null},"25-214":{"statut":"Trié","produit":"Sorgho Blanc Biologique ","caissons":[],"allot":"ART0165 - Sorgho Blanc Biologique -Alimentation humaine"},"25-160":{"statut":"Epuisé","produit":"Vesce Commune Biologique","caissons":[],"allot":null},"25-193":{"statut":"Trié","produit":"Seigle Biologique","caissons":["100","181"],"allot":"ART0043 - Seigle Biologique-"},"21-065":{"statut":"Trié","produit":"Tournesol Oléique Biologique","caissons":[],"allot":"ART0161 - Tournesol Oléique Biologique-Engrais verts"},"22-216":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique (variété : Rota)","caissons":[],"allot":null},"25-212":{"statut":"Trié","produit":"Lentilles Vertes Biologique","caissons":[],"allot":"ART0039 - Lentilles Vertes Biologique-"},"25-088-CAMELINE":{"statut":"Brut","produit":"Cameline Biologique","caissons":[],"allot":"ART0020 - Cameline Biologique-Semences"},"25-183":{"statut":"Brut","produit":"Aneth Biologique","caissons":[],"allot":"ART0710 - Aneth Biologique-"},"22-323":{"statut":"Trié","produit":"Millet","caissons":[],"allot":"ART0401 - Millet-"},"25-173":{"statut":"Epuisé","produit":"Blé Tendre Population Biologique (variété : Touselle)","caissons":["112","111","105","197"],"allot":null},"25-AL-127":{"statut":"Trié","produit":"Mélange","caissons":[],"allot":"ART0266 - Mélange-Semences"},"25-101-CAMELINE":{"statut":"Epuisé","produit":"Cameline Biologique","caissons":[],"allot":null},"23-016":{"statut":"Trié","produit":"Avoine Nue d'hiver biologique (variété : Grafton)","caissons":[],"allot":"ART0010 - Avoine Nue d'hiver biologique (variété : Grafton)-"},"25-110-MOULIN":{"statut":"Trié","produit":"Blé Tendre Population Biologique (variété : Barbu du Roussillon)","caissons":[],"allot":null},"24-017-2":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":[],"allot":null},"24-013-2":{"statut":"Trié","produit":"Cameline Biologique","caissons":[],"allot":"ART0020 - Cameline Biologique-"},"25-011":{"statut":"Trié","produit":"Avoine Rude Biologique variété : Otex","caissons":[],"allot":"ART0235 - Avoine Rude Biologique variété : Otex-Semences"},"23-079":{"statut":"Trié","produit":"Radis Fourrager Biologique","caissons":[],"allot":"ART0281 - Radis Fourrager Biologique-"},"25-158-EV":{"statut":"Trié","produit":"Lin Brun Biologique - EV","caissons":[],"allot":null},"AL-089":{"statut":"Trié","produit":"Lentilles Roses Biologique","caissons":[],"allot":null},"25-155-GG":{"statut":"Trié","produit":"Pois Carré Biologique ","caissons":[],"allot":"ART0051 - Pois Carré Biologique -Alimentation humaine"},"AL-020-1":{"statut":"Epuisé","produit":"Fenugrec Biologique","caissons":[],"allot":null},"25-163-Lentilles":{"statut":"Brut","produit":"Lentilles Roses Biologique","caissons":[],"allot":"ART0269 - Lentilles Roses Biologique-"},"25-129-AA":{"statut":"Epuisé","produit":"Gesse d'Espagne Biologique - EV","caissons":[],"allot":null},"25-AL-129":{"statut":"Trié","produit":"Méteil Avoine / Orge / Vesce / Gesse AB","caissons":["151","73","153"],"allot":"ART0166 - Méteil Avoine / Orge / Vesce / Gesse AB-Alimentation animale, Engrais verts, Semences"},"22-114":{"statut":"Epuisé","produit":"Lentilles Vertes Biologique","caissons":[],"allot":null},"24-002-AA":{"statut":"Epuisé","produit":"Pois Jaune Biologique (variété : Orchestra)","caissons":[],"allot":null},"23-169-1":{"statut":"Epuisé","produit":"Lentilles Roses Biologique Décortiqué","caissons":[],"allot":null},"25-122":{"statut":"Trié","produit":"Mélange Trèfle","caissons":[],"allot":"ART0780 - Mélange Trèfle-Semences, Engrais verts"},"25-221":{"statut":"Epuisé","produit":"Blé Dur Khorazan Biologique","caissons":[],"allot":null},"25-136":{"statut":"Trié","produit":"Pois Chiche Blanc Biologique","caissons":[],"allot":"ART0070 - Pois Chiche Blanc Biologique-Alimentation humaine, Semences"},"25-239":{"statut":"Trié","produit":"Lin Doré Biologique","caissons":[],"allot":"ART0145 - Lin Doré Biologique-"},"21-065-1":{"statut":"Trié","produit":"Tournesol Biologique - 5 kg - EV","caissons":[],"allot":"ART0645 - Tournesol Biologique - 5 kg - EV-Engrais verts"},"25-004":{"statut":"Brut","produit":"Moutarde Brune Biologique","caissons":["249","116","149","125","12","91"],"allot":"ART0156 - Moutarde Brune Biologique-Alimentation humaine"},"24-027":{"statut":"Epuisé","produit":"Avoine blanche Biologique","caissons":[],"allot":null},"23-243-2":{"statut":"Epuisé","produit":"Pois Carré Biologique - EV","caissons":[],"allot":null},"25-088":{"statut":"Trié","produit":"Lentilles Vertes Biologique","caissons":[],"allot":null},"25-AL-139":{"statut":"Trié","produit":"Sainfoin Biologique","caissons":[],"allot":"ART0031 - Sainfoin Biologique-Alimentation humaine"},"23-170-1":{"statut":"Epuisé","produit":"Trèfle Squarrosum Biologique","caissons":[],"allot":null},"23-169-2":{"statut":"Trié","produit":"Amidonnier Biologique","caissons":[],"allot":"ART0243 - Amidonnier Biologique-"},"25-AL-108":{"statut":"Epuisé","produit":"Blé Tendre Population Biologique (variété : Barbu du Roussillon)","caissons":[],"allot":null},"AL-051-F":{"statut":"Epuisé","produit":"Farine Sarrasin Biologique - 25 kg","caissons":[],"allot":null},"24-086":{"statut":"Epuisé","produit":"Cameline Biologique","caissons":[],"allot":null},"25-213":{"statut":"Trié","produit":"Haricots Blanc Biologique : type \"Mogette\"","caissons":[],"allot":"\"ART0286 - Haricots Blanc Biologique : type \"\"Mogette\"\"\"-Alimentation humaine"},"24-168":{"statut":"Epuisé","produit":"Luzerne Biologique - 25 kg - EV","caissons":[],"allot":null},"25-148-AA":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":[],"allot":null},"22-074-B18":{"statut":"Epuisé","produit":"Moutarde Brune C2","caissons":[],"allot":null},"25-168-SCURO":{"statut":"Brut","produit":"Féverole Biologique (variété : Scuro)","caissons":["247"],"allot":"ART0160 - Féverole Biologique (variété : Scuro)-Semences"},"25-AL-125":{"statut":"Trié","produit":"Blé tendre : semences fermière \" Izalco\"","caissons":["83"],"allot":"\"ART0801 - Blé tendre : semences fermière \"\" Izalco\"\"\"-Alimentation humaine"},"25-085-SCURO":{"statut":"Epuisé","produit":"Féverole Biologique (variété : Scuro)","caissons":[],"allot":null},"25-AL-104-GG":{"statut":"Trié","produit":"Féverole \"Gros PMG\" Biologique - EV","caissons":[],"allot":"\"ART0512 - Féverole \"\"Gros PMG\"\" Biologique - EV\"-Semences"},"23-076-EV":{"statut":"Epuisé","produit":"Moutarde Blanche Biologique - 5 kg - EV","caissons":[],"allot":null},"25-AL-124":{"statut":"Trié","produit":"Mélange Trèfle","caissons":[],"allot":"ART0780 - Mélange Trèfle-Semences"},"25-111":{"statut":"Epuisé","produit":"Blé Dur Khorazan Biologique","caissons":["46","171"],"allot":null},"25-101-LENTILLES":{"statut":"Trié","produit":"Lentilles Vertes Biologique","caissons":[],"allot":"ART0039 - Lentilles Vertes Biologique-Alimentation humaine"},"AL-095":{"statut":"Trié","produit":"Sorgho Biologique - EV","caissons":[],"allot":"ART0540 - Sorgho Biologique - EV-Engrais verts"},"24-078-2":{"statut":"Epuisé","produit":"Féverole Biologique","caissons":[],"allot":null},"25-158-AA":{"statut":"Epuisé","produit":"Écart de triage Lin Biologique","caissons":[],"allot":null},"22-105-EV":{"statut":"Trié","produit":"Caméline Biologique - 5 kg - EV","caissons":[],"allot":"ART0571 - Caméline Biologique - 5 kg - EV-"},"22-095-EV":{"statut":"Trié","produit":"Colza Biologique - 5 kg - EV","caissons":[],"allot":"ART0570 - Colza Biologique - 5 kg - EV-Engrais verts"},"25-162":{"statut":"Epuisé","produit":"Lin Brun Biologique","caissons":["147","154","144"],"allot":null},"24-059":{"statut":"Trié","produit":"Coriandre C2","caissons":[],"allot":"ART0363 - Coriandre C2-"},"AL-070-AA":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":[],"allot":null},"21-230":{"statut":"Epuisé","produit":"Sorgho Biologique - EV","caissons":[],"allot":null},"24-070":{"statut":"Epuisé","produit":"Phacélie Bio","caissons":[],"allot":null},"25-AL-108-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":["130"],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"25-AL-156-AA":{"statut":"Trié et stocké","produit":"Ecart de triage céréales bio","caissons":[],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"AL-096":{"statut":"Epuisé","produit":null,"caissons":["194"],"allot":null},"AL-086":{"statut":"Trié","produit":"Lentilles Vertes Biologique - EV","caissons":[],"allot":"ART0515 - Lentilles Vertes Biologique - EV-Engrais verts"},"25-216-AA":{"statut":"Trié","produit":"Ecart de triage protéagineux bio","caissons":["89"],"allot":"ART0205 - Ecart de triage protéagineux bio-Alimentation animale"},"AL-008-1":{"statut":"Epuisé","produit":"Ecart de triage céréales bio","caissons":[],"allot":null},"25-AL-147-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":[],"allot":null},"25-031":{"statut":"Epuisé","produit":"Blé tendre : semences certifiées \"Izalco\"","caissons":["20","41","36"],"allot":null},"25-069":{"statut":"Epuisé","produit":"Blé tendre : semences certifiées \"Alicantus\"","caissons":[],"allot":null},"AL-022-EV":{"statut":"Trié","produit":"Mélange Précoce Biologique - 25 kg - EV","caissons":[],"allot":"ART0659 - Mélange Précoce Biologique - 25 kg - EV-Engrais verts"},"AL-056":{"statut":"Trié","produit":"Pois Chiche Noir Petits Grains Biologique Decortiqué","caissons":[],"allot":"ART0760 - Pois Chiche Noir Petits Grains Biologique Decortiqué-"},"23-169":{"statut":"Epuisé","produit":"Lentilles Roses Biologique","caissons":[],"allot":null},"24-173-RG-1":{"statut":"Trié","produit":"Ray-Grass Biologique","caissons":[],"allot":null},"23-321":{"statut":"Epuisé","produit":"Petit Epeautre Décortiqué Biologique - 25 kg ","caissons":[],"allot":null},"25-163":{"statut":"Brut","produit":"Lentilles Roses Biologique","caissons":["64","63","93","69","72"],"allot":null},"23-076":{"statut":"Epuisé","produit":"Moutarde Blanche C2","caissons":[],"allot":null},"25-009":{"statut":"Trié","produit":"Sainfoin Biologique","caissons":[],"allot":null},"23-154-1":{"statut":"Epuisé","produit":"Féverole Biologique","caissons":[],"allot":null},"24-016":{"statut":"Epuisé","produit":"Blé Tendre Moderne Biologique (variété : Cécilius)","caissons":[],"allot":null},"24-159-1":{"statut":"Epuisé","produit":"Lentilles Vertes Biologique","caissons":[],"allot":null},"25-157-AA":{"statut":"Epuisé","produit":"Ecart de triage protéagineux bio","caissons":[],"allot":null},"25-163-Amidonnier":{"statut":"Trié","produit":"Amidonnier Biologique","caissons":[],"allot":"ART0243 - Amidonnier Biologique-Alimentation humaine"},"25-105":{"statut":"Trié","produit":"Pois Chiche Blanc Biologique","caissons":[],"allot":"ART0070 - Pois Chiche Blanc Biologique-"},"24-173-EV":{"statut":"Epuisé","produit":"Lin Doré Biologique","caissons":[],"allot":null},"AL-020-1-EV":{"statut":"Trié","produit":"Fenugrec - 25 kg","caissons":[],"allot":"ART0402 - Fenugrec - 25 kg-"},"25-186":{"statut":"Brut","produit":"Sarrasin Biologique (variété : Zita)","caissons":[],"allot":"ART0147 - Sarrasin Biologique (variété : Zita)-"},"23-203":{"statut":"Epuisé","produit":"Moutarde Orange Biologique","caissons":[],"allot":null},"25-076":{"statut":"Epuisé","produit":"Fenugrec Biologique","caissons":["67","90","70","97","95","37","107","115","80","81","38","27"],"allot":null},"25-207":{"statut":"Trié","produit":null,"caissons":[],"allot":"-Semences"},"23-355":{"statut":"Epuisé","produit":"Moutarde Brune Biologique","caissons":[],"allot":null},"24-081":{"statut":"Epuisé","produit":"Triticale Biologique - 25 kg - EV","caissons":[],"allot":null},"25-111-AA":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":["82","174"],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation animale"},"25-161-EV ":{"statut":"Trié","produit":"Lin Doré Biologique - EV","caissons":[],"allot":"ART0517 - Lin Doré Biologique - EV-"},"AL-058-EV":{"statut":"Epuisé","produit":"Méteil 1 Biologique - EV","caissons":[],"allot":null},"24-055-2":{"statut":"Trié","produit":"Vesce Commune Biologique","caissons":[],"allot":"ART0022 - Vesce Commune Biologique-Engrais verts"},"25-168-AA":{"statut":"Trié","produit":"Ecart de triage protéagineux bio","caissons":["89"],"allot":"ART0205 - Ecart de triage protéagineux bio-Alimentation animale"},"23-246-D":{"statut":"Epuisé","produit":"Pois Chiche Noir Biologique Decortiqué","caissons":[],"allot":null},"25-161":{"statut":"Epuisé","produit":"Lin Doré Biologique","caissons":["137","138","143","172","142","173"],"allot":null},"AL-002":{"statut":"Epuisé","produit":"Blé Dur Biologique","caissons":[],"allot":null},"25-172":{"statut":"Brut","produit":"Blé Tendre Population Biologique (variété : Minervois)","caissons":[],"allot":null},"24-092":{"statut":"Trié","produit":"Pois Chiche Blanc Biologique","caissons":[],"allot":"ART0070 - Pois Chiche Blanc Biologique-"},"24-020-1":{"statut":"Brut","produit":"Avoine Noire Biologique","caissons":[],"allot":"ART0025 - Avoine Noire Biologique-"},"25-096-EV":{"statut":"Trié","produit":"Lin Doré Biologique - EV","caissons":[],"allot":"ART0517 - Lin Doré Biologique - EV-Engrais verts"},"25-AL-104-PG":{"statut":"Trié","produit":"Féverole \"Petit PMG\" Biologique - EV","caissons":[],"allot":"\"ART0513 - Féverole \"\"Petit PMG\"\" Biologique - EV\"-Engrais verts"},"25-159-M":{"statut":"Trié","produit":"Ecart de triage céréales bio","caissons":["8","135","51","165","68"],"allot":"ART0171 - Ecart de triage céréales bio-Alimentation humaine"},"24-132":{"statut":"Epuisé","produit":"Sainfoin Biologique","caissons":[],"allot":null},"22-230-EV":{"statut":"Trié","produit":"Sorgho Biologique - 5 kg - EV","caissons":[],"allot":"ART0644 - Sorgho Biologique - 5 kg - EV-Engrais verts"},"25-108-EV":{"statut":"Trié","produit":"Lin Brun Biologique - EV","caissons":[],"allot":"ART0516 - Lin Brun Biologique - EV-Engrais verts"},"AL-090":{"statut":"Trié","produit":"Lin Doré Biologique - EV","caissons":[],"allot":null},"24-045":{"statut":"Epuisé","produit":"Avoine blanche Biologique","caissons":[],"allot":null}};
+
+
+    // On intègre les 2 zones vrac (préparation commande, tampon) directement
+    // dans EMPLACEMENTS — pour unifier la sémantique : tout est un "emplacement".
+    EMPLACEMENTS.push(
+      { name: "Zone préparation commande", zone: "PREP",   allee: null,
+        lots: [
+          "24-090","AL-051-F","24-168","24-081","24-112","AL-022-EV","24-060-1-EV",
+          "23-141-EV","23-054-EV","AL-020-1-EV","24-039-1-EV","21-065-1","22-230-EV",
+          "23-064","24-008-EV","24-033","24-088","24-046","23-054-EV","22-095-EV",
+          "23-054-EV","23-076-EV","22-105-EV","22-050"
+        ]
+      },
+      { name: "Zone-tampon", zone: "TAMPON", allee: null,
+        lots: [
+          "23-087-1","23-355","24-045","24-170","24-158","25-160","AL-073",
+          "25-014-Seigle","25-AL-114","25-AL-115-EV","25-143","25-014-TREFLE",
+          "25-205","23-243-2-ENV","23-366"
+        ]
+      }
+    );
+
+    // Helper d'accès — toujours utiliser cette fonction pour récupérer un emplacement
+    // (par son name unique). Renvoie l'objet vivant, donc les mutations sont propagées.
+    function getEmpl(name) {
+      return EMPLACEMENTS.find(e => e.name === name);
+    }
+
+    // Limites physiques réelles : B s'arrête à B20, C s'arrête à C15
+    // (allées au-delà existent dans Airtable mais pas dans le hangar physique)
+    const MAX_ALLEE = { B: 20, C: 15 };
+
+    // Zones dont l'ordre des allées est décroissant (gauche = numéro le + élevé)
+    const ZONES_ORDRE_DECROISSANT = new Set(["A", "B"]);
+
+    /* ============================================================
+       MOCK — produits et statuts (génération déterministe par N°lot)
+       À remplacer par les vrais champs Produit + Statut triage côté Airtable
+       ============================================================ */
+    const PRODUITS_MOCK = [
+      "Blé Tendre Bio",
+      "Seigle Bio",
+      "Avoine Bio",
+      "Triticale Bio",
+      "Sarrasin Bio",
+      "Lentille Verte Bio",
+      "Pois Chiche Bio",
+      "Pois Carré Bio",
+      "Féverole Bio Scuro",
+      "Luzerne Bio",
+      "Trèfle Bio",
+      "Coriandre Bio",
+      "Moutarde Blanche Bio",
+      "Tournesol Bio",
+      "Chanvre Bio",
+      "Cameline Bio",
+      "Amidonnier Bio",
+      "Engrain Bio",
+      "Orge Bio",
+      "Épeautre Bio"
+    ];
+
+    const STATUTS_MOCK = [
+      // pondérations approximatives basées sur l'échantillon Airtable
+      ...Array(14).fill("Trié"),
+      ...Array(3).fill("Brut"),
+      ...Array(2).fill("Non affecté"),
+      ...Array(1).fill("Trié et stocké")
+    ];
+
+    function hashStr(s) {
+      // hash déterministe simple — pour mock reproductible (fallback)
+      let h = 0;
+      for (let i = 0; i < s.length; i++) {
+        h = (h * 31 + s.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h);
+    }
+    // Renvoie les vraies données du lot si disponibles, sinon mock en fallback.
+    function infosLot(lot) {
+      const meta = LOTS_META[lot];
+      if (meta) {
+        return {
+          statut:   meta.statut   || "—",
+          produit:  meta.produit  || "—",
+          caissons: meta.caissons || [],
+          source:   "réel"
+        };
+      }
+      return {
+        statut:   STATUTS_MOCK[hashStr(lot + "s") % STATUTS_MOCK.length],
+        produit:  PRODUITS_MOCK[hashStr(lot) % PRODUITS_MOCK.length],
+        caissons: [],
+        source:   "mock"
+      };
+    }
+
+    // Construit le HTML des badges caisson(s) — vide si pas de caisson.
+    // Si > 2 caissons, on affiche les 2 premiers + un compteur "+N".
+    function caissonsHtml(caissons) {
+      if (!caissons || caissons.length === 0) return "";
+      const visibles = caissons.slice(0, 2);
+      const reste = caissons.length - visibles.length;
+      let html = '<div class="lot-caissons">';
+      for (const c of visibles) {
+        html += `<span class="lot-caisson-tag" title="Caisson ${c}">📦 ${c}</span>`;
+      }
+      if (reste > 0) {
+        html += `<span class="lot-caisson-tag" title="${caissons.join(', ')}">+${reste}</span>`;
+      }
+      html += '</div>';
+      return html;
+    }
+    // Un lot doit-il être affiché dans la maquette ?
+    // Les lots Epuisé sont exclus (gardent souvent une trace d'emplacement Airtable
+    // mais ne sont plus physiquement présents).
+    function lotAffichable(lot) {
+      const meta = LOTS_META[lot];
+      // Si on n'a pas de métadonnée, on affiche par prudence (mieux que de cacher à tort)
+      if (!meta) return true;
+      return meta.statut !== "Epuisé";
+    }
+
+    /* ============================================================
+       RENDU
+       ============================================================ */
+    function trierAllees(allees, decroissant = false) {
+      const sign = decroissant ? -1 : 1;
+      return allees.slice().sort((a, b) =>
+        sign * (Number(a.allee) - Number(b.allee))
+      );
+    }
+    function alleesParZone(zone) {
+      let filtered = EMPLACEMENTS.filter(e => e.zone === zone);
+      // Filtrer les allées qui n'existent pas physiquement
+      if (MAX_ALLEE[zone]) {
+        filtered = filtered.filter(e => Number(e.allee) <= MAX_ALLEE[zone]);
+      }
+      return trierAllees(filtered, ZONES_ORDRE_DECROISSANT.has(zone));
+    }
+    function classeStatut(statut) {
+      // pour faire passer les espaces et accents en sélecteur CSS
+      return "statut-" + statut.replace(/\s+/g, "-");
+    }
+    function renderAllee(empl) {
+      // On filtre les lots non affichables (épuisés) avant rendu
+      const lotsActifs = empl.lots.filter(lotAffichable);
+
+      const div = document.createElement("div");
+      div.className = "allee" + (lotsActifs.length === 0 ? " vide" : "");
+      // L'allée elle-même est une drop zone identifiée par son name
+      div.dataset.dropEmpl = empl.name;
+
+      const header = document.createElement("div");
+      header.className = "allee-header";
+      header.textContent = empl.name;
+      div.appendChild(header);
+
+      const content = document.createElement("div");
+      content.className = "allee-content";
+      for (const lotNum of lotsActifs) {
+        const { statut, produit } = infosLot(lotNum);
+        const card = document.createElement("div");
+        card.className = "lot " + classeStatut(statut);
+        card.dataset.lot = lotNum;
+        card.setAttribute("draggable", "true");
+        const { caissons } = infosLot(lotNum);
+        card.innerHTML = `
+          <div class="lot-num" title="${lotNum}">${lotNum}</div>
+          <div class="lot-produit" title="${produit}">${produit}</div>
+          ${caissonsHtml(caissons)}
+        `;
+        content.appendChild(card);
+      }
+      // Placeholder "Ajouter un lot" en fin de liste (visible au hover de l'allée)
+      const addPh = document.createElement("div");
+      addPh.className = "lot-add-placeholder";
+      addPh.dataset.addTo = empl.name;
+      addPh.innerHTML = "+";
+      addPh.title = `Ajouter un lot en ${empl.name}`;
+      content.appendChild(addPh);
+
+      div.appendChild(content);
+      return div;
+    }
+
+    // Re-rendu d'un emplacement (allée ou zone vrac) après une mutation.
+    // On retrouve le DOM via dataset.dropEmpl et on remplace son contenu.
+    function rerenderEmpl(emplName) {
+      const empl = getEmpl(emplName);
+      if (!empl) return;
+      if (empl.zone === "PREP") {
+        renderZoneVrac("Zone préparation commande", "prep-content");
+      } else if (empl.zone === "TAMPON") {
+        renderZoneVrac("Zone-tampon", "tampon-content");
+      } else {
+        // Allée A/B/C
+        const oldNode = document.querySelector(`.allee[data-drop-empl="${CSS.escape(emplName)}"]`);
+        if (!oldNode) return;
+        const newNode = renderAllee(empl);
+        oldNode.replaceWith(newNode);
+      }
+    }
+    function renderZone(zone, containerId) {
+      const container = document.getElementById(containerId);
+      for (const empl of alleesParZone(zone)) {
+        container.appendChild(renderAllee(empl));
+      }
+    }
+
+    // Rendu pour les zones sans allées numérotées (prépa commande, tampon).
+    // On lit les lots depuis EMPLACEMENTS via le name de l'emplacement.
+    function renderZoneVrac(emplName, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      // Le container lui-même est la drop zone
+      container.dataset.dropEmpl = emplName;
+      const empl = getEmpl(emplName);
+      if (!empl) return;
+      const lotsActifs = empl.lots.filter(lotAffichable);
+      for (const lotNum of lotsActifs) {
+        const { statut, produit } = infosLot(lotNum);
+        const card = document.createElement("div");
+        card.className = "lot " + classeStatut(statut);
+        card.dataset.lot = lotNum;
+        card.setAttribute("draggable", "true");
+        const { caissons } = infosLot(lotNum);
+        card.innerHTML = `
+          <div class="lot-num" title="${lotNum}">${lotNum}</div>
+          <div class="lot-produit" title="${produit}">${produit}</div>
+          ${caissonsHtml(caissons)}
+        `;
+        container.appendChild(card);
+      }
+      // Placeholder "Ajouter un lot" en fin de grille (visible au hover de la zone vrac)
+      const addPh = document.createElement("div");
+      addPh.className = "lot-add-placeholder";
+      addPh.dataset.addTo = emplName;
+      addPh.innerHTML = "+";
+      addPh.title = `Ajouter un lot en ${emplName}`;
+      container.appendChild(addPh);
+    }
+
+    /* ============================================================
+       HOVER HIGHLIGHT — autres portions d'un même lot
+       ============================================================ */
+    function installHoverHighlight() {
+      const hangar = document.getElementById("hangar");
+      hangar.addEventListener("mouseover", (e) => {
+        const card = e.target.closest(".lot");
+        if (!card) return;
+        const lot = card.dataset.lot;
+        document.querySelectorAll(`.lot[data-lot="${CSS.escape(lot)}"]`)
+          .forEach(el => el.classList.add("highlight"));
+      });
+      hangar.addEventListener("mouseout", (e) => {
+        const card = e.target.closest(".lot");
+        if (!card) return;
+        const lot = card.dataset.lot;
+        document.querySelectorAll(`.lot[data-lot="${CSS.escape(lot)}"]`)
+          .forEach(el => el.classList.remove("highlight"));
+      });
+    }
+
+    /* ============================================================
+       INIT
+       ============================================================ */
+    renderZone("A", "allees-A");
+    renderZone("B", "allees-B");
+    renderZone("C", "allees-C");
+    renderZoneVrac("Zone préparation commande", "prep-content");
+    renderZoneVrac("Zone-tampon",               "tampon-content");
+    installHoverHighlight();
+
+    /* ============================================================
+       FILTRES — toggle statuts (légende) + recherche produit/lot
+       Les deux filtres se combinent par ET. Aucun filtre actif = tout affiché.
+       ============================================================ */
+    const filterState = {
+      statuts: new Set(),  // statuts cochés ; vide = pas de filtre statut
+      query:   ""          // texte de recherche libre ; vide = pas de filtre texte
+    };
+
+    function applyFilters() {
+      const cards = document.querySelectorAll(".lot");
+      const filtreStatutActif = filterState.statuts.size > 0;
+      const q = filterState.query.trim().toLowerCase();
+      const filtreTexteActif = q.length > 0;
+
+      cards.forEach(card => {
+        const lot = card.dataset.lot;
+        const { statut, produit } = infosLot(lot);
+
+        const matchStatut = !filtreStatutActif || filterState.statuts.has(statut);
+        const matchTexte  = !filtreTexteActif  ||
+          lot.toLowerCase().includes(q) ||
+          (produit || "").toLowerCase().includes(q);
+
+        const visible = matchStatut && matchTexte;
+        card.classList.toggle("dimmed-by-filter", !visible);
+      });
+    }
+
+    // --- Toggle statut via la légende ---
+    document.getElementById("legend").addEventListener("click", (e) => {
+      const item = e.target.closest(".legend-item.clickable");
+      if (!item) return;
+      const st = item.dataset.statut;
+      if (filterState.statuts.has(st)) {
+        filterState.statuts.delete(st);
+        item.classList.remove("toggle-on");
+      } else {
+        filterState.statuts.add(st);
+        item.classList.add("toggle-on");
+      }
+      // Marquer les items non actifs en "dimmed" si au moins un est actif
+      const someOn = filterState.statuts.size > 0;
+      document.querySelectorAll(".legend-item.clickable").forEach(el => {
+        el.classList.toggle("dimmed",
+          someOn && !filterState.statuts.has(el.dataset.statut));
+      });
+      applyFilters();
+    });
+
+    // --- Recherche produit / lot avec autocomplete ---
+    const searchInput = document.getElementById("search-input");
+    const searchClear = document.getElementById("search-clear");
+
+    // Liste des produits uniques pour le dropdown — calculée une fois.
+    const produitsUniques = [...new Set(
+      Object.values(LOTS_META).map(m => m.produit).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, "fr"));
+
+    // Compteur de lots actifs (non épuisés) par produit, pour info en suggestion
+    const lotsParProduit = {};
+    for (const [lot, m] of Object.entries(LOTS_META)) {
+      if (m.statut === "Epuisé") continue;
+      if (!m.produit) continue;
+      lotsParProduit[m.produit] = (lotsParProduit[m.produit] || 0) + 1;
+    }
+
+    const suggBox = document.getElementById("search-suggestions");
+    let suggActiveIndex = -1;
+
+    function ouvrirSuggestions(query) {
+      const q = query.trim().toLowerCase();
+      const matches = q
+        ? produitsUniques.filter(p => p.toLowerCase().includes(q))
+        : produitsUniques;  // liste complète si pas de filtre — le dropdown scrolle
+      suggBox.innerHTML = "";
+      suggActiveIndex = -1;
+      if (matches.length === 0) {
+        suggBox.innerHTML = '<div class="search-suggestions-empty">Aucun produit ne correspond</div>';
+      } else {
+        for (const p of matches) {
+          const item = document.createElement("div");
+          item.className = "search-suggestion";
+          const count = lotsParProduit[p] || 0;
+          item.innerHTML = `<span>${p}</span><span class="count">${count}</span>`;
+          item.dataset.value = p;
+          item.addEventListener("mousedown", (e) => {
+            e.preventDefault(); // évite le blur de l'input
+            choisirSuggestion(p);
+          });
+          suggBox.appendChild(item);
+        }
+      }
+      suggBox.classList.remove("hidden");
+    }
+    function fermerSuggestions() {
+      suggBox.classList.add("hidden");
+      suggActiveIndex = -1;
+    }
+    function choisirSuggestion(value) {
+      searchInput.value = value;
+      filterState.query = value;
+      applyFilters();
+      fermerSuggestions();
+    }
+    function bougerSelection(delta) {
+      const items = suggBox.querySelectorAll(".search-suggestion");
+      if (items.length === 0) return;
+      if (suggActiveIndex >= 0) items[suggActiveIndex].classList.remove("active");
+      suggActiveIndex = (suggActiveIndex + delta + items.length) % items.length;
+      const active = items[suggActiveIndex];
+      active.classList.add("active");
+      active.scrollIntoView({ block: "nearest" });
+    }
+
+    searchInput.addEventListener("input", () => {
+      filterState.query = searchInput.value;
+      applyFilters();
+      ouvrirSuggestions(searchInput.value);
+    });
+    searchInput.addEventListener("focus", () => {
+      ouvrirSuggestions(searchInput.value);
+    });
+    searchInput.addEventListener("blur", () => {
+      // léger délai pour laisser le clic sur une suggestion s'enregistrer
+      setTimeout(fermerSuggestions, 120);
+    });
+    searchInput.addEventListener("keydown", (e) => {
+      if (suggBox.classList.contains("hidden")) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); bougerSelection(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); bougerSelection(-1); }
+      else if (e.key === "Enter" && suggActiveIndex >= 0) {
+        e.preventDefault();
+        const val = suggBox.querySelectorAll(".search-suggestion")[suggActiveIndex].dataset.value;
+        choisirSuggestion(val);
+      } else if (e.key === "Escape") {
+        fermerSuggestions();
+      }
+    });
+    searchClear.addEventListener("click", () => {
+      searchInput.value = "";
+      filterState.query = "";
+      applyFilters();
+      fermerSuggestions();
+      searchInput.focus();
+    });
+
+    /* ============================================================
+       MODAL D'ÉDITION DU LOT
+       Ouverte au clic sur n'importe quelle carte lot.
+       Les champs sont éditables (préparation pour future écriture
+       vers Airtable). "Valider" n'écrit pas encore — c'est une maquette.
+       ============================================================ */
+    const modal = document.getElementById("lot-modal");
+
+    // Renvoie la liste des emplacements (Name) où le lot apparaît actuellement.
+    // Inclut les zones logiques (préparation commande, tampon) car elles sont
+    // désormais aussi des entrées de EMPLACEMENTS.
+    function emplacementsDuLot(lot) {
+      return EMPLACEMENTS.filter(e => e.lots.includes(lot)).map(e => e.name);
+    }
+
+    function openModal(lot) {
+      const { statut, produit } = infosLot(lot);
+      document.getElementById("modal-lot-num").textContent = lot;
+      document.getElementById("modal-lot-produit").textContent = produit || "—";
+
+      // Remplir les inputs
+      document.getElementById("f-lot").value         = lot;
+      document.getElementById("f-produit").value     = produit || "";
+      document.getElementById("f-statut").value      = statut || "Brut";
+      document.getElementById("f-bioc2").value       = "—";   // pas dans LOTS_META actuellement
+      document.getElementById("f-campagne").value    = "";    // idem
+      document.getElementById("f-poids").value       = "";    // idem
+      document.getElementById("f-commentaire").value = "";
+
+      // Tags emplacements (lecture seule pour l'instant)
+      const ctn = document.getElementById("f-emplacements");
+      ctn.innerHTML = "";
+      const empls = emplacementsDuLot(lot);
+      if (empls.length === 0) {
+        ctn.innerHTML = '<span class="text-xs text-stone-400 px-1">Aucun emplacement</span>';
+      } else {
+        for (const name of empls) {
+          const tag = document.createElement("span");
+          tag.className = "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200";
+          tag.textContent = name;
+          ctn.appendChild(tag);
+        }
+      }
+
+      // Tags caissons métalliques
+      const ctnCaissons = document.getElementById("f-caissons");
+      ctnCaissons.innerHTML = "";
+      const { caissons } = infosLot(lot);
+      if (!caissons || caissons.length === 0) {
+        ctnCaissons.innerHTML = '<span class="text-xs text-stone-400 px-1">Aucun caisson</span>';
+      } else {
+        for (const c of caissons) {
+          const tag = document.createElement("span");
+          tag.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-stone-700 text-stone-50";
+          tag.innerHTML = `📦 N° ${c}`;
+          ctnCaissons.appendChild(tag);
+        }
+      }
+
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden"; // empêche scroll en arrière-plan
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    // Click dans le hangar :
+    //  - sur un placeholder "+" → ouvrir la modale d'ajout
+    //  - sinon sur une carte lot → ouvrir la modale d'édition
+    document.getElementById("hangar").addEventListener("click", (e) => {
+      const placeholder = e.target.closest(".lot-add-placeholder");
+      if (placeholder) {
+        openAddModal(placeholder.dataset.addTo);
+        return;
+      }
+      const card = e.target.closest(".lot");
+      if (!card) return;
+      // Ignore les lots assombris par un filtre actif
+      if (card.classList.contains("dimmed-by-filter")) return;
+      openModal(card.dataset.lot);
+    });
+    // Idem pour les zones vrac (prépa / tampon) — pas dans #hangar mais
+    // dans la même structure DOM, donc en fait déjà couvert.
+
+    // Fermeture
+    document.getElementById("modal-close").addEventListener("click", closeModal);
+    document.getElementById("modal-cancel").addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();  // clic sur l'overlay
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+    });
+
+    /* ============================================================
+       DRAG-AND-DROP — déplacement de portions de lot entre emplacements
+       Logique métier :
+       - moveLot(lot, from, to, { regrouperTout })
+         · Retire lot de from
+         · Si regrouperTout : retire aussi de tous les autres emplacements
+         · Ajoute lot à to (si pas déjà présent — opération idempotente = fusion)
+       ============================================================ */
+
+    function moveLot(lot, fromName, toName, { regrouperTout = false } = {}) {
+      // 1. Snapshot des emplacements impactés AVANT la mutation (pour undo)
+      const sources = regrouperTout
+        ? emplacementsDuLot(lot).filter(n => n !== toName)
+        : [fromName];
+      const allImpacted = new Set([...sources, toName]);
+      const snapshot = {};
+      allImpacted.forEach(name => {
+        const e = getEmpl(name);
+        if (e) snapshot[name] = [...e.lots];
+      });
+
+      // 2. Mutation
+      const touched = new Set();
+      for (const srcName of sources) {
+        const src = getEmpl(srcName);
+        if (!src) continue;
+        const i = src.lots.indexOf(lot);
+        if (i >= 0) { src.lots.splice(i, 1); touched.add(srcName); }
+      }
+      const dst = getEmpl(toName);
+      if (dst && !dst.lots.includes(lot)) {
+        dst.lots.push(lot);
+        touched.add(toName);
+      }
+      touched.forEach(rerenderEmpl);
+      applyFilters();
+      console.log(`[move] ${lot} : ${fromName} → ${toName} (regrouper=${regrouperTout}) ; touched =`, [...touched]);
+
+      // 3. Toast d'undo
+      const label = regrouperTout
+        ? `<span class="lot-ref">${lot}</span> regroupé en <span class="lot-ref">${toName}</span>`
+        : `<span class="lot-ref">${lot}</span> déplacé en <span class="lot-ref">${toName}</span>`;
+      showToast(label, () => {
+        Object.entries(snapshot).forEach(([name, lots]) => {
+          const e = getEmpl(name);
+          if (e) e.lots = [...lots];
+        });
+        Object.keys(snapshot).forEach(rerenderEmpl);
+        applyFilters();
+        console.log(`[undo move] restauré : ${Object.keys(snapshot).join(', ')}`);
+      });
+    }
+
+    // Modal de confirmation : on construit dynamiquement le contenu selon le cas.
+    const moveModal = document.getElementById("move-modal");
+    const moveSubtitle = document.getElementById("move-modal-subtitle");
+    const moveBody = document.getElementById("move-modal-body");
+    const moveCancel = document.getElementById("move-cancel");
+
+    function openMoveModal(lot, fromName, toName) {
+      if (fromName === toName) return; // no-op, on n'ouvre même pas la modal
+      const empls = emplacementsDuLot(lot);   // y compris fromName
+      const nbEmpls = empls.length;
+      const dstContientDeja = empls.includes(toName) && toName !== fromName;
+
+      const { produit } = infosLot(lot);
+      moveSubtitle.textContent = produit ? `${lot} · ${produit}` : lot;
+
+      // Helpers pour construire un bouton de choix
+      const choice = (titre, sousTitre, onClick, primary = false) => {
+        const btn = document.createElement("button");
+        btn.className = primary
+          ? "w-full text-left px-4 py-3 rounded-md bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+          : "w-full text-left px-4 py-3 rounded-md border border-stone-300 hover:bg-stone-50 hover:border-amber-400";
+        btn.innerHTML = `
+          <div class="font-medium ${primary ? '' : 'text-stone-800'}">${titre}</div>
+          <div class="text-xs ${primary ? 'text-amber-100' : 'text-stone-500'} mt-0.5">${sousTitre}</div>
+        `;
+        btn.addEventListener("click", () => {
+          onClick();
+          closeMoveModal();
+        });
+        return btn;
+      };
+
+      moveBody.innerHTML = "";
+
+      // Cas 1 : mono-emplacement → simple déplacement
+      if (nbEmpls === 1) {
+        moveBody.appendChild(choice(
+          `Déplacer en ${toName}`,
+          `Le lot quitte ${fromName} pour ${toName}.`,
+          () => moveLot(lot, fromName, toName, { regrouperTout: false }),
+          true
+        ));
+      }
+      // Cas 2 : multi-emplacements
+      else {
+        const autresEmpls = empls.filter(n => n !== fromName);
+        const recapMulti = `Le lot est aussi présent en ${autresEmpls.join(", ")}.`;
+
+        if (dstContientDeja) {
+          // Cas 2c : fusion
+          moveBody.insertAdjacentHTML("beforeend",
+            `<div class="text-sm text-stone-600 mb-2">
+              Ce lot est <strong>déjà présent en ${toName}</strong>.
+              ${recapMulti}
+            </div>`);
+          moveBody.appendChild(choice(
+            `Fusionner cette portion avec ${toName}`,
+            `Retire ${lot} de ${fromName}. Les autres emplacements (${autresEmpls.filter(n => n !== toName).join(", ") || "—"}) restent inchangés.`,
+            () => moveLot(lot, fromName, toName, { regrouperTout: false }),
+            true
+          ));
+          moveBody.appendChild(choice(
+            `Regrouper tout le lot en ${toName}`,
+            `Retire ${lot} de tous les autres emplacements pour le rassembler en ${toName}.`,
+            () => moveLot(lot, fromName, toName, { regrouperTout: true }),
+            false
+          ));
+        } else {
+          // Cas 2b : multi-emplacement, dst nouvelle
+          moveBody.insertAdjacentHTML("beforeend",
+            `<div class="text-sm text-stone-600 mb-2">
+              Ce lot est dans <strong>${nbEmpls} emplacements</strong>. ${recapMulti}
+            </div>`);
+          moveBody.appendChild(choice(
+            `Déplacer seulement cette portion`,
+            `${fromName} → ${toName}. Les portions en ${autresEmpls.join(", ")} ne bougent pas.`,
+            () => moveLot(lot, fromName, toName, { regrouperTout: false }),
+            true
+          ));
+          moveBody.appendChild(choice(
+            `Regrouper tout le lot en ${toName}`,
+            `Toutes les portions (${empls.join(", ")}) sont déplacées en ${toName}.`,
+            () => moveLot(lot, fromName, toName, { regrouperTout: true }),
+            false
+          ));
+        }
+      }
+
+      moveModal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeMoveModal() {
+      moveModal.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+    moveCancel.addEventListener("click", closeMoveModal);
+    moveModal.addEventListener("click", (e) => { if (e.target === moveModal) closeMoveModal(); });
+
+    // --- Handlers HTML5 Drag and Drop ---
+    let currentDropEl = null;        // dernier drop target sous le pointeur
+    let currentDragLot = null;       // {lot, from} en cours de drag
+
+    function setDropTarget(el) {
+      if (currentDropEl === el) return;
+      if (currentDropEl) {
+        currentDropEl.classList.remove("drop-target-allee", "drop-target-vrac");
+      }
+      currentDropEl = el;
+      if (el) {
+        const isVrac = el.classList.contains("prep-content");
+        el.classList.add(isVrac ? "drop-target-vrac" : "drop-target-allee");
+      }
+    }
+
+    document.addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".lot");
+      if (!card) return;
+      // Drag interdit si lot filtré
+      if (card.classList.contains("dimmed-by-filter")) { e.preventDefault(); return; }
+      const dropEl = card.closest("[data-drop-empl]");
+      const from = dropEl ? dropEl.dataset.dropEmpl : null;
+      currentDragLot = { lot: card.dataset.lot, from };
+      card.classList.add("dragging");
+      // Nécessaire pour Firefox
+      e.dataTransfer.setData("text/plain", card.dataset.lot);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    document.addEventListener("dragend", (e) => {
+      const card = e.target.closest(".lot");
+      if (card) card.classList.remove("dragging");
+      setDropTarget(null);
+      currentDragLot = null;
+    });
+
+    document.addEventListener("dragover", (e) => {
+      const target = e.target.closest("[data-drop-empl]");
+      if (!target) { setDropTarget(null); return; }
+      e.preventDefault();   // autorise le drop
+      e.dataTransfer.dropEffect = "move";
+      setDropTarget(target);
+    });
+
+    document.addEventListener("drop", (e) => {
+      const target = e.target.closest("[data-drop-empl]");
+      setDropTarget(null);
+      if (!target || !currentDragLot) return;
+      e.preventDefault();
+      const toName   = target.dataset.dropEmpl;
+      const fromName = currentDragLot.from;
+      const lot      = currentDragLot.lot;
+      currentDragLot = null;
+      if (!fromName || fromName === toName) return;  // pas de modal si pas de mouvement
+      openMoveModal(lot, fromName, toName);
+    });
+
+    /* ============================================================
+       MODE PLEIN ÉCRAN PAR ZONE
+       Clic sur l'icône à côté du nom de zone : la zone bascule en
+       fullscreen (position: fixed + animation). Re-clic ou Échap pour sortir.
+       ============================================================ */
+    let zoneFullscreenId = null;
+
+    function enterFullscreen(zoneId) {
+      if (zoneFullscreenId === zoneId) return;
+      if (zoneFullscreenId) exitFullscreen();  // sécurité, une seule zone à la fois
+      const z = document.getElementById(zoneId);
+      if (!z) return;
+      z.classList.add("fullscreen");
+      document.body.classList.add("has-fullscreen");
+      zoneFullscreenId = zoneId;
+    }
+    function exitFullscreen() {
+      if (!zoneFullscreenId) return;
+      const z = document.getElementById(zoneFullscreenId);
+      if (z) z.classList.remove("fullscreen");
+      document.body.classList.remove("has-fullscreen");
+      zoneFullscreenId = null;
+    }
+    // Clic sur n'importe quel bouton fs-toggle
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".fs-toggle");
+      if (!btn) return;
+      const zoneId = btn.dataset.fs;
+      if (zoneFullscreenId === zoneId) {
+        exitFullscreen();
+      } else {
+        enterFullscreen(zoneId);
+      }
+    });
+    // Échap pour sortir du plein écran (en priorité sur les modales)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && zoneFullscreenId
+          && modal.classList.contains("hidden")
+          && moveModal.classList.contains("hidden")) {
+        exitFullscreen();
+      }
+    });
+
+    /* ============================================================
+       TOAST D'UNDO — affiché après chaque action de déplacement / ajout.
+       Disparaît au bout de 5s ou immédiatement au clic sur "Annuler".
+       Un seul toast à la fois : un nouveau remplace l'ancien.
+       ============================================================ */
+    let currentToast = null;
+    let currentToastTimeout = null;
+
+    function showToast(messageHtml, onUndo) {
+      if (currentToast) {
+        clearTimeout(currentToastTimeout);
+        currentToast.remove();
+        currentToast = null;
+      }
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `
+        <div class="toast-message">${messageHtml}</div>
+        <button class="toast-undo" type="button">Annuler</button>
+        <div class="toast-progress"></div>
+      `;
+      document.body.appendChild(toast);
+      currentToast = toast;
+
+      function close() {
+        toast.classList.add("leaving");
+        setTimeout(() => {
+          toast.remove();
+          if (currentToast === toast) currentToast = null;
+        }, 200);
+      }
+      toast.querySelector(".toast-undo").addEventListener("click", () => {
+        clearTimeout(currentToastTimeout);
+        try { onUndo(); } catch (err) { console.error("Undo failed:", err); }
+        close();
+      });
+      currentToastTimeout = setTimeout(close, 5000);
+    }
+
+    /* ============================================================
+       SUGGESTIONS D'ALLOTEMENTS
+       Calcule les groupes (clé allot identique, >= 2 lots non épuisés),
+       et un toggle qui met en évidence ces groupes.
+       ============================================================ */
+    // Mapping clé d'allotement → liste des lots concernés (groupes >= 2 lots)
+    const ALLOTEMENT_GROUPS = (function() {
+      const byKey = {};
+      for (const [lot, m] of Object.entries(LOTS_META)) {
+        if (!m.allot) continue;
+        if (m.statut === "Epuisé" || m.statut === "Non affecté") continue;
+        (byKey[m.allot] = byKey[m.allot] || []).push(lot);
+      }
+      // ne garder que les groupes avec au moins 2 lots
+      return Object.fromEntries(
+        Object.entries(byKey).filter(([_, lots]) => lots.length >= 2)
+      );
+    })();
+    // Mapping lot → clé (pour les lots faisant partie d'un groupe valide)
+    const LOT_TO_ALLOT_KEY = {};
+    for (const [key, lots] of Object.entries(ALLOTEMENT_GROUPS)) {
+      for (const l of lots) LOT_TO_ALLOT_KEY[l] = key;
+    }
+    console.log(`[allotements] ${Object.keys(ALLOTEMENT_GROUPS).length} groupes détectés`);
+
+    // Marque les cards "allotable" et leur attribue data-allot-key.
+    // Appelé après chaque (re)rendu (init + rerenderEmpl + addLotToEmpl + moveLot)
+    function markAllotableCards() {
+      document.querySelectorAll(".lot").forEach(card => {
+        const key = LOT_TO_ALLOT_KEY[card.dataset.lot];
+        if (key) {
+          card.classList.add("allotable");
+          card.dataset.allotKey = key;
+        } else {
+          card.classList.remove("allotable");
+          delete card.dataset.allotKey;
+        }
+      });
+    }
+    markAllotableCards();
+
+    // Hook : ré-appliquer après chaque mutation d'allée
+    const _origRerenderEmpl = rerenderEmpl;
+    rerenderEmpl = function(emplName) {
+      _origRerenderEmpl(emplName);
+      markAllotableCards();
+    };
+
+    // Toggle global
+    const allotBtn = document.getElementById("allotement-toggle");
+    allotBtn.addEventListener("click", () => {
+      const on = !document.body.classList.contains("allotement-on");
+      document.body.classList.toggle("allotement-on", on);
+      allotBtn.classList.toggle("active", on);
+    });
+
+    // Hover allotement : highlighter les autres lots du même groupe.
+    // S'ajoute au hover existant (multi-emplacements) — un lot peut donc être
+    // highlight au survol soit d'une de ses portions, soit d'un lot allotement-compatible.
+    document.getElementById("hangar").addEventListener("mouseover", (e) => {
+      if (!document.body.classList.contains("allotement-on")) return;
+      const card = e.target.closest(".lot.allotable");
+      if (!card) return;
+      const key = card.dataset.allotKey;
+      document.querySelectorAll(`.lot[data-allot-key="${CSS.escape(key)}"]`)
+        .forEach(el => el.classList.add("highlight"));
+    });
+    document.getElementById("hangar").addEventListener("mouseout", (e) => {
+      if (!document.body.classList.contains("allotement-on")) return;
+      const card = e.target.closest(".lot.allotable");
+      if (!card) return;
+      const key = card.dataset.allotKey;
+      document.querySelectorAll(`.lot[data-allot-key="${CSS.escape(key)}"]`)
+        .forEach(el => el.classList.remove("highlight"));
+    });
+
+    /* ============================================================
+       MODAL "AJOUTER UN LOT" — ouverte via les placeholders "+"
+       ============================================================ */
+    const addModal = document.getElementById("add-modal");
+    const addInput = document.getElementById("add-lot-input");
+    const addSuggBox = document.getElementById("add-lot-suggestions");
+    const addInfo = document.getElementById("add-lot-info");
+    const addConfirmBtn = document.getElementById("add-modal-confirm");
+    let addTargetEmpl = null;
+    let addSelectedLot = null;
+    let addSuggActiveIdx = -1;
+
+    function openAddModal(emplName) {
+      addTargetEmpl = emplName;
+      addSelectedLot = null;
+      addInput.value = "";
+      addSuggBox.classList.add("hidden");
+      addInfo.classList.add("hidden");
+      document.getElementById("add-lot-placeholder").classList.remove("hidden");
+      addConfirmBtn.disabled = true;
+      document.getElementById("add-target-empl").textContent = emplName;
+      addModal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+      setTimeout(() => addInput.focus(), 50);
+    }
+    function closeAddModal() {
+      addModal.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    // Lots éligibles : non épuisés, et pas déjà présents dans la cible
+    function lotsDispoPourAjout() {
+      const empl = getEmpl(addTargetEmpl);
+      const dejaIci = empl ? new Set(empl.lots) : new Set();
+      return Object.entries(LOTS_META)
+        .filter(([lot, m]) => m.statut !== "Epuisé" && !dejaIci.has(lot))
+        .map(([lot, m]) => ({ lot, produit: m.produit, statut: m.statut }))
+        .sort((a, b) => a.lot.localeCompare(b.lot, "fr"));
+    }
+
+    function updateAddSuggestions(query) {
+      const q = query.trim().toLowerCase();
+      const lots = lotsDispoPourAjout();
+      const filtered = q
+        ? lots.filter(l =>
+            l.lot.toLowerCase().includes(q) ||
+            (l.produit || "").toLowerCase().includes(q))
+        : lots;
+      addSuggBox.innerHTML = "";
+      addSuggActiveIdx = -1;
+      if (filtered.length === 0) {
+        addSuggBox.innerHTML = '<div class="px-3 py-2 text-sm text-stone-400 italic">Aucun lot ne correspond</div>';
+      } else {
+        for (const l of filtered) {
+          const item = document.createElement("div");
+          item.className = "add-sugg px-3 py-2 hover:bg-amber-50 cursor-pointer border-b border-stone-100 last:border-b-0";
+          item.innerHTML = `
+            <div class="font-mono text-sm text-stone-800">${l.lot}</div>
+            <div class="text-xs text-stone-500">${l.produit || ''} <span class="text-stone-400">·</span> ${l.statut}</div>
+          `;
+          item.dataset.lot = l.lot;
+          item.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            selectAddLot(l.lot);
+          });
+          addSuggBox.appendChild(item);
+        }
+      }
+      addSuggBox.classList.remove("hidden");
+    }
+
+    function selectAddLot(lot) {
+      addSelectedLot = lot;
+      addInput.value = lot;
+      addSuggBox.classList.add("hidden");
+      const { produit, statut, caissons } = infosLot(lot);
+      document.getElementById("add-info-produit").textContent = produit || "—";
+      document.getElementById("add-info-statut").textContent = statut;
+      const otherEmpls = emplacementsDuLot(lot).filter(n => n !== addTargetEmpl);
+      document.getElementById("add-info-empls").textContent =
+        otherEmpls.length ? otherEmpls.join(", ") : "Aucun";
+      const ctnC = document.getElementById("add-info-caissons");
+      ctnC.innerHTML = "";
+      if (!caissons || caissons.length === 0) {
+        ctnC.innerHTML = '<span class="text-xs text-stone-400 italic">Aucun</span>';
+      } else {
+        for (const c of caissons) {
+          const tag = document.createElement("span");
+          tag.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-stone-700 text-stone-50";
+          tag.textContent = `📦 ${c}`;
+          ctnC.appendChild(tag);
+        }
+      }
+      addInfo.classList.remove("hidden");
+      document.getElementById("add-lot-placeholder").classList.add("hidden");
+      addConfirmBtn.disabled = false;
+    }
+
+    function addLotToEmpl(lot, emplName) {
+      const empl = getEmpl(emplName);
+      if (!empl) return;
+      if (empl.lots.includes(lot)) return;
+      empl.lots.push(lot);
+      rerenderEmpl(emplName);
+      applyFilters();
+      console.log(`[add] ${lot} ajouté à ${emplName}`);
+      // Toast d'undo : on retire simplement le lot ajouté
+      showToast(
+        `<span class="lot-ref">${lot}</span> ajouté en <span class="lot-ref">${emplName}</span>`,
+        () => {
+          const e = getEmpl(emplName);
+          if (!e) return;
+          const i = e.lots.indexOf(lot);
+          if (i >= 0) e.lots.splice(i, 1);
+          rerenderEmpl(emplName);
+          applyFilters();
+          console.log(`[undo add] ${lot} retiré de ${emplName}`);
+        }
+      );
+    }
+
+    function moveAddSuggSelection(delta) {
+      const items = addSuggBox.querySelectorAll(".add-sugg");
+      if (items.length === 0) return;
+      if (addSuggActiveIdx >= 0) items[addSuggActiveIdx].classList.remove("bg-amber-100");
+      addSuggActiveIdx = (addSuggActiveIdx + delta + items.length) % items.length;
+      items[addSuggActiveIdx].classList.add("bg-amber-100");
+      items[addSuggActiveIdx].scrollIntoView({ block: "nearest" });
+    }
+
+    addInput.addEventListener("input", () => updateAddSuggestions(addInput.value));
+    addInput.addEventListener("focus", () => updateAddSuggestions(addInput.value));
+    addInput.addEventListener("blur", () => setTimeout(() => addSuggBox.classList.add("hidden"), 120));
+    addInput.addEventListener("keydown", (e) => {
+      if (addSuggBox.classList.contains("hidden")) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); moveAddSuggSelection(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); moveAddSuggSelection(-1); }
+      else if (e.key === "Enter" && addSuggActiveIdx >= 0) {
+        e.preventDefault();
+        const items = addSuggBox.querySelectorAll(".add-sugg");
+        selectAddLot(items[addSuggActiveIdx].dataset.lot);
+      }
+    });
+
+    document.getElementById("add-modal-close").addEventListener("click", closeAddModal);
+    document.getElementById("add-modal-cancel").addEventListener("click", closeAddModal);
+    addModal.addEventListener("click", (e) => { if (e.target === addModal) closeAddModal(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !addModal.classList.contains("hidden")) closeAddModal();
+    });
+    addConfirmBtn.addEventListener("click", () => {
+      if (!addSelectedLot || !addTargetEmpl) return;
+      addLotToEmpl(addSelectedLot, addTargetEmpl);
+      closeAddModal();
+    });
+
+    // Validation — maquette : on log et on ferme. Pas d'écriture Airtable encore.
+    document.getElementById("modal-save").addEventListener("click", () => {
+      const payload = {
+        lot:         document.getElementById("f-lot").value,
+        produit:     document.getElementById("f-produit").value,
+        statut:      document.getElementById("f-statut").value,
+        bioc2:       document.getElementById("f-bioc2").value,
+        campagne:    document.getElementById("f-campagne").value,
+        poids:       document.getElementById("f-poids").value,
+        commentaire: document.getElementById("f-commentaire").value
+      };
+      console.log("[maquette] payload de validation (pas d'écriture Airtable) :", payload);
+      alert("Maquette : sauvegarde non branchée.\nVoir la console pour le payload qui serait envoyé.");
+      closeModal();
+    });
+  </script>
+
+</body>
+</html>
