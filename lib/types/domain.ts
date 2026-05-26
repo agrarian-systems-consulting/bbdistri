@@ -5,7 +5,7 @@ export const STATUTS_TRIAGE = [
   "Brut",
   "Trié",
   "Trié stocké",
-  "À retrier",
+  "A retrier",
   "Non affecté",
   "Epuisé",
 ] as const;
