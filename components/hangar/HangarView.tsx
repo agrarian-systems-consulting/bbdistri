@@ -388,35 +388,47 @@ export function HangarView({
 
   const handleSaveLotPatch = useCallback(
     async (lot: Lot, patch: LotPatch) => {
+      // Règle métier : passage à Epuisé → détache automatiquement tous les
+      // emplacements (côté optimistic ; le serveur fait la même chose pour
+      // sécuriser même si le client est bypassé).
+      const effectivePatch: LotPatch = { ...patch };
+      if (patch.statut === "Epuisé" && lot.emplacementIds.length > 0) {
+        effectivePatch.emplacementIds = [];
+      }
+
       const previous: Partial<Lot> = {};
-      if (patch.statut !== undefined) previous.statut = lot.statut;
-      if (patch.bioC2 !== undefined) previous.bioC2 = lot.bioC2;
-      if (patch.commentaire !== undefined)
+      if (effectivePatch.statut !== undefined) previous.statut = lot.statut;
+      if (effectivePatch.bioC2 !== undefined) previous.bioC2 = lot.bioC2;
+      if (effectivePatch.commentaire !== undefined)
         previous.commentaire = lot.commentaire;
-      if (patch.caissonIds !== undefined)
+      if (effectivePatch.caissonIds !== undefined)
         previous.caissonIds = lot.caissonIds;
-      if (patch.emplacementIds !== undefined)
+      if (effectivePatch.emplacementIds !== undefined)
         previous.emplacementIds = lot.emplacementIds;
-      if (patch.destinationIds !== undefined)
+      if (effectivePatch.destinationIds !== undefined)
         previous.destinationIds = lot.destinationIds;
 
       setLocalLots((prev) =>
-        prev.map((l) => (l.id === lot.id ? { ...l, ...patch } : l)),
+        prev.map((l) => (l.id === lot.id ? { ...l, ...effectivePatch } : l)),
       );
 
       try {
         await patchLot(lot.id, {
-          statut: patch.statut,
-          bioC2: patch.bioC2,
-          commentaire: patch.commentaire,
-          caissonIds: patch.caissonIds,
-          emplacementIds: patch.emplacementIds,
-          destinationIds: patch.destinationIds,
+          statut: effectivePatch.statut,
+          bioC2: effectivePatch.bioC2,
+          commentaire: effectivePatch.commentaire,
+          caissonIds: effectivePatch.caissonIds,
+          emplacementIds: effectivePatch.emplacementIds,
+          destinationIds: effectivePatch.destinationIds,
         });
+        const epuiseDetached =
+          patch.statut === "Epuisé" && lot.emplacementIds.length > 0;
         toast(`Lot ${lot.nom} mis à jour`, {
-          description: patch.statut
-            ? `Statut → ${patch.statut}`
-            : "Modification enregistrée",
+          description: epuiseDetached
+            ? `Statut → Epuisé · ${lot.emplacementIds.length} emplacement${lot.emplacementIds.length > 1 ? "s" : ""} détaché${lot.emplacementIds.length > 1 ? "s" : ""}`
+            : patch.statut
+              ? `Statut → ${patch.statut}`
+              : "Modification enregistrée",
           action: {
             label: "Annuler",
             onClick: () => undoLotPatch(lot, previous),
@@ -432,7 +444,7 @@ export function HangarView({
         });
       }
     },
-    [undoLotPatch],
+    [undoLotPatch, setLocalLots],
   );
 
   const placeUnplaced = useCallback(

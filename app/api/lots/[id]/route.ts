@@ -75,6 +75,11 @@ export async function PATCH(
       );
     }
     fields["Statut triage"] = body.statut;
+    // Règle métier : passer un lot en Epuisé détache automatiquement tous ses
+    // emplacements (un lot épuisé n'occupe plus d'allée physique).
+    if (body.statut === "Epuisé") {
+      fields.Emplacements = [];
+    }
   }
   if (body.bioC2 !== undefined) {
     if (!isBioC2OrNull(body.bioC2)) {
