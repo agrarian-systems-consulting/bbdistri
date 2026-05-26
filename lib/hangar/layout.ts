@@ -29,11 +29,24 @@ export function groupEmplacementsByZone(
 }
 
 /**
+ * Nombre maximum d'allées physiques par zone (cf. maquette v1).
+ * Airtable peut contenir des allées au-delà (réserves non utilisées) ;
+ * on les masque côté UI.
+ */
+const MAX_ALLEES: Record<Zone, number> = {
+  A: 17,
+  B: 20,
+  C: 15,
+  PREP: Number.POSITIVE_INFINITY,
+  TAMPON: Number.POSITIVE_INFINITY,
+};
+
+/**
  * Tri des allées selon la convention du hangar (cf. docs/CLAUDE.md) :
- * - Zone A : décroissant (A17 → A01)
- * - Zone B : décroissant (B20 → B01)
- * - Zone C : croissant (C1 → C15)
- * - PREP / TAMPON : ordre stable d'insertion
+ * - Zone A : décroissant (A17 → A01), max 17
+ * - Zone B : décroissant (B20 → B01), max 20
+ * - Zone C : croissant (C1 → C15), max 15
+ * - PREP / TAMPON : ordre stable d'insertion, pas de filtre numérique
  */
 export function sortEmplacements(
   emplacements: Emplacement[],
@@ -41,11 +54,16 @@ export function sortEmplacements(
 ): Emplacement[] {
   if (zone === "PREP" || zone === "TAMPON") return emplacements;
 
+  const max = MAX_ALLEES[zone];
+  const filtered = emplacements.filter((e) => {
+    const n = Number(e.allee);
+    return Number.isFinite(n) && n >= 1 && n <= max;
+  });
+
   const reversed = zone === "A" || zone === "B";
-  return [...emplacements].sort((a, b) => {
-    const an = Number(a.allee ?? Number.NaN);
-    const bn = Number(b.allee ?? Number.NaN);
-    if (Number.isNaN(an) || Number.isNaN(bn)) return 0;
+  return filtered.sort((a, b) => {
+    const an = Number(a.allee);
+    const bn = Number(b.allee);
     return reversed ? bn - an : an - bn;
   });
 }
