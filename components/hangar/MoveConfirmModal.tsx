@@ -17,26 +17,36 @@ type Props = {
   onCancel: () => void;
 };
 
-const ACTION_LABELS: Record<
-  MoveAction,
-  { primary: string; description: string }
-> = {
-  "move-portion": {
-    primary: "Déplacer cette portion",
-    description:
-      "Seule la portion sélectionnée bouge. Les autres emplacements du lot restent inchangés.",
-  },
-  "regroup-all": {
-    primary: "Regrouper tout le lot",
-    description:
-      "Toutes les portions du lot (tous emplacements confondus) sont consolidées dans la destination.",
-  },
-  merge: {
+function actionLabel(
+  action: MoveAction,
+  isMulti: boolean,
+): { primary: string; description: string } {
+  if (action === "move-portion") {
+    if (isMulti) {
+      return {
+        primary: "Déplacer cette portion seulement",
+        description:
+          "Seule la portion sélectionnée bouge. Les autres emplacements du lot restent inchangés.",
+      };
+    }
+    return {
+      primary: "Déplacer ce lot",
+      description: "Le lot est déplacé vers le nouvel emplacement.",
+    };
+  }
+  if (action === "regroup-all") {
+    return {
+      primary: "Regrouper tout le lot",
+      description:
+        "Toutes les portions du lot (tous emplacements confondus) sont consolidées dans la destination.",
+    };
+  }
+  return {
     primary: "Fusionner avec la portion existante",
     description:
       "La destination contient déjà ce lot. On retire la portion source ; idempotent.",
-  },
-};
+  };
+}
 
 export function MoveConfirmModal({ analysis, onConfirm, onCancel }: Props) {
   const open = Boolean(analysis);
@@ -69,7 +79,7 @@ export function MoveConfirmModal({ analysis, onConfirm, onCancel }: Props) {
 
             <div className="space-y-2 py-1">
               {analysis.availableActions.map((action) => {
-                const meta = ACTION_LABELS[action];
+                const meta = actionLabel(action, analysis.isMultiEmplacement);
                 return (
                   <button
                     key={action}
