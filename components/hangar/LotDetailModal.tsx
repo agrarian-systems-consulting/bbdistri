@@ -166,9 +166,11 @@ export function LotDetailModal({
 
   return (
     <Dialog
-      open={Boolean(lot)}
+      open={Boolean(lot) && !confirmEpuiseOpen}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        // Ignore la fermeture déclenchée par l'ouverture du sous-dialog
+        // de confirmation : c'est nous qui cachons la modale, pas le user.
+        if (!next && !confirmEpuiseOpen) onClose();
       }}
     >
       <DialogContent className="sm:max-w-lg">
