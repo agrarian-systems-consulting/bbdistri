@@ -825,18 +825,18 @@ body.unplaced-on .footer-note {
   outline-offset: -2px;
 }
 
-/* Placeholder "+" pour ajouter un lot existant : même style que les drop targets
-   du drag-and-drop (border 2px dashed vert, fond vert pâle). Visible au hover. */
+/* Placeholder "+" pour ajouter un lot existant : style cohérent avec les drop targets
+   du drag-and-drop (border dashed verte) mais plus discret. Visible au hover de l'allée. */
 .lot-add-placeholder {
-  border: 2px dashed #2e7d32;
+  border: 1px dashed #2e7d32;
   border-radius: 3px;
-  background: rgba(76, 175, 80, 0.1);
+  background: rgba(76, 175, 80, 0.08);
   color: #2e7d32;
-  min-height: 22px;
+  min-height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   opacity: 0;
@@ -850,11 +850,15 @@ body.unplaced-on .footer-note {
 }
 .lot-add-placeholder:hover {
   opacity: 1 !important;
-  background: rgba(76, 175, 80, 0.2);
+  background: rgba(76, 175, 80, 0.18);
 }
 .zone.fullscreen .lot-add-placeholder {
-  min-height: 36px;
-  font-size: 1.4rem;
+  min-height: 30px;
+  font-size: 1.2rem;
+}
+/* Pendant un drag, on masque le placeholder "+" pour éviter de polluer la cible visuelle */
+body.is-dragging .lot-add-placeholder {
+  display: none;
 }
 .lot:hover {
   transform: translateY(-1px);

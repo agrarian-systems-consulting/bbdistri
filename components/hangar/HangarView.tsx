@@ -159,6 +159,12 @@ export function HangarView({
   }, [fullscreenZone]);
 
   useEffect(() => {
+    if (!activeDragLotId) return;
+    document.body.classList.add("is-dragging");
+    return () => document.body.classList.remove("is-dragging");
+  }, [activeDragLotId]);
+
+  useEffect(() => {
     if (openSidebar === "allotements") {
       document.body.classList.add("allotement-on");
       return () => document.body.classList.remove("allotement-on");
