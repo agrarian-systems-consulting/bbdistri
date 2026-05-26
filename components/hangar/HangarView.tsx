@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { toast } from "sonner";
 import {
   parseDraggableLotId,
   parseDroppableEmplacementId,
@@ -21,6 +22,11 @@ import {
   groupEmplacementsByZone,
   groupLotsByEmplacement,
 } from "@/lib/hangar/layout";
+import {
+  analyzeMove,
+  computeNewEmplacementIds,
+  type MoveAction,
+} from "@/lib/hangar/moveLot";
 import { statutClass } from "@/lib/hangar/statut";
 import type {
   Emplacement,
@@ -30,6 +36,7 @@ import type {
 } from "@/lib/types/domain";
 import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
+import { MoveConfirmModal } from "./MoveConfirmModal";
 import { Topbar } from "./Topbar";
 
 type Props = {
@@ -37,6 +44,27 @@ type Props = {
   emplacements: Emplacement[];
   caissonsById: Record<string, string>;
 };
+
+type PendingMove = {
+  lot: Lot;
+  sourceEmp: Emplacement;
+  destEmp: Emplacement;
+};
+
+async function patchLotEmplacements(
+  lotId: string,
+  emplacementIds: string[],
+): Promise<void> {
+  const res = await fetch(`/api/lots/${lotId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emplacementIds }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`PATCH lot ${lotId} échoué (${res.status}) : ${body}`);
+  }
+}
 
 export function HangarView({ lots, emplacements, caissonsById }: Props) {
   const [hoveredLotId, setHoveredLotId] = useState<string | null>(null);
@@ -46,19 +74,33 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [allotementMode, setAllotementMode] = useState(false);
-  const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
   const [allotementHoveredKey, setAllotementHoveredKey] = useState<
     string | null
   >(null);
+  const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [localLots, setLocalLots] = useState<Lot[]>(lots);
 
-  const lotsParEmp = useMemo(() => groupLotsByEmplacement(lots), [lots]);
+  useEffect(() => {
+    setLocalLots(lots);
+  }, [lots]);
+
+  const lotsParEmp = useMemo(
+    () => groupLotsByEmplacement(localLots),
+    [localLots],
+  );
   const empsParZone = useMemo(
     () => groupEmplacementsByZone(emplacements),
     [emplacements],
   );
+  const empsById = useMemo(() => {
+    const m = new Map<string, Emplacement>();
+    for (const e of emplacements) m.set(e.id, e);
+    return m;
+  }, [emplacements]);
   const allotementGroups = useMemo(
-    () => computeAllotementGroups(lots),
-    [lots],
+    () => computeAllotementGroups(localLots),
+    [localLots],
   );
   const allotableLotIds = useMemo(() => {
     const set = new Set<string>();
@@ -69,9 +111,9 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   }, [allotementGroups]);
   const lotsById = useMemo(() => {
     const m = new Map<string, Lot>();
-    for (const lot of lots) m.set(lot.id, lot);
+    for (const lot of localLots) m.set(lot.id, lot);
     return m;
-  }, [lots]);
+  }, [localLots]);
 
   useEffect(() => {
     if (!fullscreenZone) return;
@@ -128,20 +170,91 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     if (parsed) setActiveDragLotId(parsed.lotId);
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveDragLotId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const src = parseDraggableLotId(String(active.id));
-    const dst = parseDroppableEmplacementId(String(over.id));
-    if (!src || !dst) return;
-    if (src.emplacementId === dst) return;
-    console.log("[dnd] move", src.lotId, "from", src.emplacementId, "→", dst);
-  }, []);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDragLotId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const src = parseDraggableLotId(String(active.id));
+      const dst = parseDroppableEmplacementId(String(over.id));
+      if (!src || !dst) return;
+      if (src.emplacementId === dst) return;
 
-  const activeDragLot = activeDragLotId
-    ? lotsById.get(activeDragLotId)
-    : undefined;
+      const lot = lotsById.get(src.lotId);
+      const sourceEmp = empsById.get(src.emplacementId);
+      const destEmp = empsById.get(dst);
+      if (!lot || !sourceEmp || !destEmp) return;
+
+      setPendingMove({ lot, sourceEmp, destEmp });
+    },
+    [empsById, lotsById],
+  );
+
+  const applyLocalEmplacementsUpdate = useCallback(
+    (lotId: string, newEmplacementIds: string[]) => {
+      setLocalLots((prev) =>
+        prev.map((l) =>
+          l.id === lotId ? { ...l, emplacementIds: newEmplacementIds } : l,
+        ),
+      );
+    },
+    [],
+  );
+
+  const undoMove = useCallback(
+    async (lot: Lot, previousIds: string[]) => {
+      applyLocalEmplacementsUpdate(lot.id, previousIds);
+      try {
+        await patchLotEmplacements(lot.id, previousIds);
+        toast.success(`Lot ${lot.nom} : déplacement annulé`);
+      } catch (err) {
+        toast.error("Annulation échouée", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [applyLocalEmplacementsUpdate],
+  );
+
+  const handleConfirm = useCallback(
+    async (action: MoveAction) => {
+      const ctx = pendingMove;
+      if (!ctx) return;
+      setPendingMove(null);
+
+      const previousIds = [...ctx.lot.emplacementIds];
+      const newIds = computeNewEmplacementIds(ctx, action);
+
+      applyLocalEmplacementsUpdate(ctx.lot.id, newIds);
+
+      try {
+        await patchLotEmplacements(ctx.lot.id, newIds);
+        toast(`Lot ${ctx.lot.nom} déplacé`, {
+          description: `${ctx.sourceEmp.allee ?? ctx.sourceEmp.name} → ${
+            ctx.destEmp.allee ?? ctx.destEmp.name
+          }${action === "regroup-all" ? " (regroupement total)" : action === "merge" ? " (fusion)" : ""}`,
+          action: {
+            label: "Annuler",
+            onClick: () => undoMove(ctx.lot, previousIds),
+          },
+          duration: 5000,
+        });
+      } catch (err) {
+        applyLocalEmplacementsUpdate(ctx.lot.id, previousIds);
+        toast.error("Déplacement échoué", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [pendingMove, applyLocalEmplacementsUpdate, undoMove],
+  );
+
+  const pendingAnalysis = useMemo(
+    () => (pendingMove ? analyzeMove(pendingMove) : null),
+    [pendingMove],
+  );
+
+  const activeDragLot = activeDragLotId ? lotsById.get(activeDragLotId) : null;
 
   return (
     <DndContext
@@ -150,7 +263,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
       onDragEnd={handleDragEnd}
     >
       <Topbar
-        totalLots={lots.length}
+        totalLots={localLots.length}
         totalEmplacements={emplacements.length}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
@@ -185,6 +298,11 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           onClose={toggleAllotement}
         />
       ) : null}
+      <MoveConfirmModal
+        analysis={pendingAnalysis}
+        onConfirm={handleConfirm}
+        onCancel={() => setPendingMove(null)}
+      />
       <DragOverlay dropAnimation={null}>
         {activeDragLot ? (
           <div
