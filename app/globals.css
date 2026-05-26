@@ -951,12 +951,13 @@ body.has-fullscreen::before {
   font-style: normal;
 }
 
-/* Barre de progression "temps restant" sur les toasts Sonner (durée 5s par défaut) */
-[data-sonner-toast] {
+/* Barre "temps restant" : uniquement sur les toasts neutres avec action undo (data-type="normal").
+   Les toasts success/error/etc. (toast.success, toast.error) gardent leur look natif Sonner. */
+[data-sonner-toast][data-type="normal"] {
   position: relative !important;
   overflow: hidden !important;
 }
-[data-sonner-toast]::after {
+[data-sonner-toast][data-type="normal"]::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -966,7 +967,7 @@ body.has-fullscreen::before {
   background: #f59e0b;
   animation: toast-progress 5s linear forwards;
 }
-[data-sonner-toast]:hover::after {
+[data-sonner-toast][data-type="normal"]:hover::after {
   animation-play-state: paused;
 }
 @keyframes toast-progress {
