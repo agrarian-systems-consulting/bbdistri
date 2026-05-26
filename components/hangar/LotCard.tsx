@@ -1,7 +1,6 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { draggableLotId } from "@/lib/hangar/dnd-ids";
 import { statutClass } from "@/lib/hangar/statut";
 import type { Lot } from "@/lib/types/domain";
@@ -26,12 +25,11 @@ export function LotCard({
   onHoverChange,
 }: Props) {
   const dragId = draggableLotId(emplacementId, lot.id);
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: dragId,
-      data: { lotId: lot.id, sourceEmplacementId: emplacementId },
-      disabled: isDimmed,
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: dragId,
+    data: { lotId: lot.id, sourceEmplacementId: emplacementId },
+    disabled: isDimmed,
+  });
 
   const caissonNumeros = lot.caissonIds
     .map((id) => caissonsById[id])
@@ -48,16 +46,11 @@ export function LotCard({
     .filter(Boolean)
     .join(" ");
 
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform) }
-    : undefined;
-
   return (
     <div
       ref={setNodeRef}
       className={classes}
       data-lot-id={lot.id}
-      style={style}
       onMouseEnter={() => onHoverChange(lot.id)}
       onMouseLeave={() => onHoverChange(null)}
       {...listeners}

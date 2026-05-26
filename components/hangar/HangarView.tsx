@@ -4,12 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { statutClass } from "@/lib/hangar/statut";
 import {
   parseDraggableLotId,
   parseDroppableEmplacementId,
@@ -41,6 +44,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [allotementMode, setAllotementMode] = useState(false);
+  const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
 
   const lotsParEmp = useMemo(() => groupLotsByEmplacement(lots), [lots]);
   const empsParZone = useMemo(
@@ -94,7 +98,13 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     useSensor(KeyboardSensor),
   );
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const parsed = parseDraggableLotId(String(event.active.id));
+    if (parsed) setActiveDragLotId(parsed.lotId);
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveDragLotId(null);
     const { active, over } = event;
     if (!over) return;
     const src = parseDraggableLotId(String(active.id));
@@ -104,8 +114,17 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     console.log("[dnd] move", src.lotId, "from", src.emplacementId, "→", dst);
   }, []);
 
+  const activeDragLot = useMemo(
+    () => (activeDragLotId ? lots.find((l) => l.id === activeDragLotId) : null),
+    [activeDragLotId, lots],
+  );
+
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <Topbar
         totalLots={lots.length}
         totalEmplacements={emplacements.length}
@@ -131,6 +150,22 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
         <em>Hangar</em> filtrés en amont.
       </p>
+      <DragOverlay dropAnimation={null}>
+        {activeDragLot ? (
+          <div
+            className={`lot ${statutClass(activeDragLot.statut)}`}
+            style={{
+              cursor: "grabbing",
+              boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div className="lot-num">{activeDragLot.nom}</div>
+            {activeDragLot.produit ? (
+              <div className="lot-produit">{activeDragLot.produit}</div>
+            ) : null}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
