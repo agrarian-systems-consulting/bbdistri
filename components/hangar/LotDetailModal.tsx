@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/Combobox";
-import { Select } from "@/components/Select";
+import { MultiCombobox } from "@/components/MultiCombobox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUTS_TRIAGE } from "@/lib/types/domain";
@@ -74,19 +74,6 @@ export function LotDetailModal({
     setCaissonIds(lot.caissonIds);
   }, [lot]);
 
-  const availableCaissons = useMemo(() => {
-    const attached = new Set(caissonIds);
-    return Object.entries(caissonsById)
-      .filter(([id]) => !attached.has(id))
-      .map(([id, numero]) => ({ id, numero }))
-      .sort((a, b) => {
-        const an = Number(a.numero);
-        const bn = Number(b.numero);
-        if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
-        return a.numero.localeCompare(b.numero);
-      });
-  }, [caissonsById, caissonIds]);
-
   if (!lot) {
     return (
       <Dialog open={false} onOpenChange={() => onClose()}>
@@ -108,15 +95,6 @@ export function LotDetailModal({
     newBioC2 !== lot.bioC2 ||
     newCommentaire !== oldCommentaire ||
     caissonsDirty;
-
-  const addCaisson = (id: string) => {
-    if (!id || caissonIds.includes(id)) return;
-    setCaissonIds([...caissonIds, id]);
-  };
-
-  const removeCaisson = (id: string) => {
-    setCaissonIds(caissonIds.filter((x) => x !== id));
-  };
 
   const submit = async () => {
     if (!dirty || saving) return;
@@ -166,29 +144,30 @@ export function LotDetailModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lot-statut">Statut triage</Label>
-              <Select
-                id="lot-statut"
+              <Combobox
+                options={STATUTS_TRIAGE.map((s) => ({ value: s, label: s }))}
                 value={statut}
-                onChange={(e) => setStatut(e.target.value as StatutTriage)}
-              >
-                {STATUTS_TRIAGE.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
+                onChange={(v) => {
+                  if (v) setStatut(v as StatutTriage);
+                }}
+                placeholder="Statut…"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lot-bioc2">Bio / C2</Label>
-              <Select
-                id="lot-bioc2"
+              <Combobox
+                options={[
+                  { value: "Bio", label: "Bio" },
+                  { value: "C2", label: "C2" },
+                  { value: "none", label: "— (non renseigné)" },
+                ]}
                 value={bioC2}
-                onChange={(e) => setBioC2(e.target.value as BioC2Choice)}
-              >
-                <option value="Bio">Bio</option>
-                <option value="C2">C2</option>
-                <option value="none">— (non renseigné)</option>
-              </Select>
+                onChange={(v) => {
+                  if (v) setBioC2(v as BioC2Choice);
+                  else setBioC2("none");
+                }}
+                placeholder="Bio / C2…"
+              />
             </div>
           </div>
 
@@ -214,46 +193,22 @@ export function LotDetailModal({
 
           <div className="space-y-1.5">
             <Label>Caissons métalliques</Label>
-            <div className="flex flex-wrap gap-1.5 min-h-8 px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
-              {caissonIds.length > 0 ? (
-                caissonIds.map((id) => {
-                  const num = caissonsById[id] ?? id;
-                  return (
-                    <span
-                      key={id}
-                      className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded bg-amber-700 text-amber-50"
-                    >
-                      Caisson {num}
-                      <button
-                        type="button"
-                        onClick={() => removeCaisson(id)}
-                        className="hover:text-amber-100 leading-none text-sm"
-                        aria-label={`Retirer caisson ${num}`}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  );
-                })
-              ) : (
-                <span className="text-xs text-stone-400 italic">
-                  Aucun caisson
-                </span>
-              )}
-            </div>
-            <Combobox
-              options={availableCaissons.map(({ id, numero }) => ({
-                value: id,
-                label: `Caisson ${numero}`,
-              }))}
-              value=""
-              onChange={addCaisson}
-              placeholder={
-                availableCaissons.length === 0
-                  ? "Aucun caisson disponible"
-                  : "Ajouter un caisson…"
-              }
-              disabled={availableCaissons.length === 0}
+            <MultiCombobox
+              options={Object.entries(caissonsById)
+                .map(([id, numero]) => ({
+                  value: id,
+                  label: `Caisson ${numero}`,
+                }))
+                .sort((a, b) => {
+                  const an = Number(a.label.replace("Caisson ", ""));
+                  const bn = Number(b.label.replace("Caisson ", ""));
+                  if (Number.isFinite(an) && Number.isFinite(bn))
+                    return an - bn;
+                  return a.label.localeCompare(b.label);
+                })}
+              values={caissonIds}
+              onValuesChange={setCaissonIds}
+              placeholder="Tapez un numéro pour ajouter un caisson…"
             />
           </div>
 
