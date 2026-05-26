@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  type CollisionDetection,
   DndContext,
   type DragEndEvent,
   DragOverlay,
@@ -195,6 +196,19 @@ export function HangarView({
   const toggleSidebar = useCallback((kind: SidebarKind) => {
     setOpenSidebar((current) => (current === kind ? null : kind));
   }, []);
+
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      if (!fullscreenZone) return pointerWithin(args);
+      const filtered = args.droppableContainers.filter((c) => {
+        const empId = c.data.current?.emplacementId as string | undefined;
+        if (!empId) return false;
+        return empsById.get(empId)?.zone === fullscreenZone;
+      });
+      return pointerWithin({ ...args, droppableContainers: filtered });
+    },
+    [fullscreenZone, empsById],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -420,7 +434,7 @@ export function HangarView({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
