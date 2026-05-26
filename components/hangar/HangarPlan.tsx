@@ -14,6 +14,8 @@ type Props = {
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
+  allotableLotIds: Set<string>;
+  allotementHoveredKey: string | null;
   fullscreenZone: ZoneType | null;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
@@ -28,6 +30,8 @@ export function HangarPlan(props: Props) {
     hoveredLotId: props.hoveredLotId,
     activeStatuts: props.activeStatuts,
     searchQuery: props.searchQuery,
+    allotableLotIds: props.allotableLotIds,
+    allotementHoveredKey: props.allotementHoveredKey,
     isFullscreen: props.fullscreenZone === zone,
     onToggleFullscreen: props.onToggleFullscreen,
     onHoverChange: props.onHoverChange,

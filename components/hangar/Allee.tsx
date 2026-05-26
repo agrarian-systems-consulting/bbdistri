@@ -2,7 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { droppableEmplacementId } from "@/lib/hangar/dnd-ids";
-import { isAllotable, shouldDimByFilter } from "@/lib/hangar/filters";
+import { shouldDimByFilter } from "@/lib/hangar/filters";
 import type { Emplacement, Lot, StatutTriage } from "@/lib/types/domain";
 import { LotCard } from "./LotCard";
 
@@ -13,6 +13,8 @@ type Props = {
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
+  allotableLotIds: Set<string>;
+  allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
 };
 
@@ -23,6 +25,8 @@ export function Allee({
   hoveredLotId,
   activeStatuts,
   searchQuery,
+  allotableLotIds,
+  allotementHoveredKey,
   onHoverChange,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({
@@ -49,8 +53,13 @@ export function Allee({
             emplacementId={emplacement.id}
             caissonsById={caissonsById}
             isHighlighted={hoveredLotId === lot.id}
-            isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
-            isAllotable={isAllotable(lot)}
+            isDimmed={shouldDimByFilter(
+              lot,
+              activeStatuts,
+              searchQuery,
+              allotementHoveredKey,
+            )}
+            isAllotable={allotableLotIds.has(lot.id)}
             onHoverChange={onHoverChange}
           />
         ))}

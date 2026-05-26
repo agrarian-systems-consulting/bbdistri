@@ -2,7 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { droppableEmplacementId } from "@/lib/hangar/dnd-ids";
-import { isAllotable, shouldDimByFilter } from "@/lib/hangar/filters";
+import { shouldDimByFilter } from "@/lib/hangar/filters";
 import type {
   Emplacement,
   Lot,
@@ -28,6 +28,8 @@ type Props = {
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
+  allotableLotIds: Set<string>;
+  allotementHoveredKey: string | null;
   isFullscreen: boolean;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
@@ -40,6 +42,8 @@ function VracDropZone({
   hoveredLotId,
   activeStatuts,
   searchQuery,
+  allotableLotIds,
+  allotementHoveredKey,
   onHoverChange,
 }: {
   emplacement: Emplacement;
@@ -48,6 +52,8 @@ function VracDropZone({
   hoveredLotId: string | null;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
+  allotableLotIds: Set<string>;
+  allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -67,8 +73,13 @@ function VracDropZone({
           emplacementId={emplacement.id}
           caissonsById={caissonsById}
           isHighlighted={hoveredLotId === lot.id}
-          isDimmed={shouldDimByFilter(lot, activeStatuts, searchQuery)}
-          isAllotable={isAllotable(lot)}
+          isDimmed={shouldDimByFilter(
+            lot,
+            activeStatuts,
+            searchQuery,
+            allotementHoveredKey,
+          )}
+          isAllotable={allotableLotIds.has(lot.id)}
           onHoverChange={onHoverChange}
         />
       ))}
@@ -76,19 +87,24 @@ function VracDropZone({
   );
 }
 
-export function Zone({
-  zone,
-  emplacements,
-  lotsParEmp,
-  caissonsById,
-  hoveredLotId,
-  activeStatuts,
-  searchQuery,
-  isFullscreen,
-  onToggleFullscreen,
-  onHoverChange,
-}: Props) {
+export function Zone(props: Props) {
+  const {
+    zone,
+    emplacements,
+    lotsParEmp,
+    isFullscreen,
+    onToggleFullscreen,
+  } = props;
   const vrac = zone === "PREP" || zone === "TAMPON";
+  const childProps = {
+    caissonsById: props.caissonsById,
+    hoveredLotId: props.hoveredLotId,
+    activeStatuts: props.activeStatuts,
+    searchQuery: props.searchQuery,
+    allotableLotIds: props.allotableLotIds,
+    allotementHoveredKey: props.allotementHoveredKey,
+    onHoverChange: props.onHoverChange,
+  };
 
   return (
     <section className={`zone zone-${zone} ${isFullscreen ? "fullscreen" : ""}`}>
@@ -125,11 +141,7 @@ export function Zone({
           <VracDropZone
             emplacement={emplacements[0]}
             lots={emplacements.flatMap((e) => lotsParEmp.get(e.id) ?? [])}
-            caissonsById={caissonsById}
-            hoveredLotId={hoveredLotId}
-            activeStatuts={activeStatuts}
-            searchQuery={searchQuery}
-            onHoverChange={onHoverChange}
+            {...childProps}
           />
         ) : (
           <div className="prep-content" />
@@ -141,11 +153,7 @@ export function Zone({
               key={emp.id}
               emplacement={emp}
               lots={lotsParEmp.get(emp.id) ?? []}
-              caissonsById={caissonsById}
-              hoveredLotId={hoveredLotId}
-              activeStatuts={activeStatuts}
-              searchQuery={searchQuery}
-              onHoverChange={onHoverChange}
+              {...childProps}
             />
           ))}
         </div>

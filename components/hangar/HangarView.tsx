@@ -12,21 +12,23 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { statutClass } from "@/lib/hangar/statut";
 import {
   parseDraggableLotId,
   parseDroppableEmplacementId,
 } from "@/lib/hangar/dnd-ids";
+import { computeAllotementGroups } from "@/lib/hangar/filters";
 import {
   groupEmplacementsByZone,
   groupLotsByEmplacement,
 } from "@/lib/hangar/layout";
+import { statutClass } from "@/lib/hangar/statut";
 import type {
   Emplacement,
   Lot,
   StatutTriage,
   Zone as ZoneType,
 } from "@/lib/types/domain";
+import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
 import { Topbar } from "./Topbar";
 
@@ -45,12 +47,31 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [allotementMode, setAllotementMode] = useState(false);
   const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
+  const [allotementHoveredKey, setAllotementHoveredKey] = useState<
+    string | null
+  >(null);
 
   const lotsParEmp = useMemo(() => groupLotsByEmplacement(lots), [lots]);
   const empsParZone = useMemo(
     () => groupEmplacementsByZone(emplacements),
     [emplacements],
   );
+  const allotementGroups = useMemo(
+    () => computeAllotementGroups(lots),
+    [lots],
+  );
+  const allotableLotIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const ids of allotementGroups.values()) {
+      for (const id of ids) set.add(id);
+    }
+    return set;
+  }, [allotementGroups]);
+  const lotsById = useMemo(() => {
+    const m = new Map<string, Lot>();
+    for (const lot of lots) m.set(lot.id, lot);
+    return m;
+  }, [lots]);
 
   useEffect(() => {
     if (!fullscreenZone) return;
@@ -87,7 +108,11 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   }, []);
 
   const toggleAllotement = useCallback(() => {
-    setAllotementMode((v) => !v);
+    setAllotementMode((v) => {
+      const next = !v;
+      if (!next) setAllotementHoveredKey(null);
+      return next;
+    });
   }, []);
 
   const sensors = useSensors(
@@ -114,10 +139,9 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     console.log("[dnd] move", src.lotId, "from", src.emplacementId, "→", dst);
   }, []);
 
-  const activeDragLot = useMemo(
-    () => (activeDragLotId ? lots.find((l) => l.id === activeDragLotId) : null),
-    [activeDragLotId, lots],
-  );
+  const activeDragLot = activeDragLotId
+    ? lotsById.get(activeDragLotId)
+    : undefined;
 
   return (
     <DndContext
@@ -142,6 +166,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         hoveredLotId={hoveredLotId}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
+        allotableLotIds={allotableLotIds}
+        allotementHoveredKey={allotementHoveredKey}
         fullscreenZone={fullscreenZone}
         onToggleFullscreen={toggleFullscreen}
         onHoverChange={setHoveredLotId}
@@ -150,6 +176,15 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
         <em>Hangar</em> filtrés en amont.
       </p>
+      {allotementMode ? (
+        <AllotementSidebar
+          groups={allotementGroups}
+          lotsById={lotsById}
+          hoveredKey={allotementHoveredKey}
+          onHoverKey={setAllotementHoveredKey}
+          onClose={toggleAllotement}
+        />
+      ) : null}
       <DragOverlay dropAnimation={null}>
         {activeDragLot ? (
           <div
