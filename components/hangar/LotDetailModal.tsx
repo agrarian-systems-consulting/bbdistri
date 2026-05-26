@@ -27,6 +27,7 @@ export type LotPatch = {
   bioC2?: BioC2 | null;
   commentaire?: string | null;
   caissonIds?: string[];
+  emplacementIds?: string[];
 };
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -64,6 +65,7 @@ export function LotDetailModal({
   const [bioC2, setBioC2] = useState<BioC2Choice>("none");
   const [commentaire, setCommentaire] = useState("");
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
+  const [emplacementIds, setEmplacementIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -72,6 +74,7 @@ export function LotDetailModal({
     setBioC2(bioC2ToChoice(lot.bioC2));
     setCommentaire(lot.commentaire ?? "");
     setCaissonIds(lot.caissonIds);
+    setEmplacementIds(lot.emplacementIds);
   }, [lot]);
 
   if (!lot) {
@@ -82,19 +85,39 @@ export function LotDetailModal({
     );
   }
 
-  const empNames = lot.emplacementIds
-    .map((id) => emplacementsById.get(id)?.name)
-    .filter((n): n is string => Boolean(n));
-
   const newBioC2 = choiceToBioC2(bioC2);
   const newCommentaire = commentaire.trim() === "" ? null : commentaire;
   const oldCommentaire = lot.commentaire;
   const caissonsDirty = !arraysEqual(caissonIds, lot.caissonIds);
+  const emplacementsDirty = !arraysEqual(emplacementIds, lot.emplacementIds);
   const dirty =
     statut !== lot.statut ||
     newBioC2 !== lot.bioC2 ||
     newCommentaire !== oldCommentaire ||
-    caissonsDirty;
+    caissonsDirty ||
+    emplacementsDirty;
+
+  const emplacementOptions = (() => {
+    const ZONE_ORDER: Record<string, number> = {
+      A: 0,
+      PREP: 1,
+      C: 2,
+      TAMPON: 3,
+      B: 4,
+    };
+    return Array.from(emplacementsById.values())
+      .map((e) => ({ value: e.id, label: e.name, zone: e.zone, allee: e.allee }))
+      .sort((a, b) => {
+        const za = ZONE_ORDER[a.zone] ?? 99;
+        const zb = ZONE_ORDER[b.zone] ?? 99;
+        if (za !== zb) return za - zb;
+        const an = Number(a.allee);
+        const bn = Number(b.allee);
+        if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
+        return a.label.localeCompare(b.label);
+      })
+      .map(({ value, label }) => ({ value, label }));
+  })();
 
   const submit = async () => {
     if (!dirty || saving) return;
@@ -105,6 +128,7 @@ export function LotDetailModal({
       if (newBioC2 !== lot.bioC2) patch.bioC2 = newBioC2;
       if (newCommentaire !== oldCommentaire) patch.commentaire = newCommentaire;
       if (caissonsDirty) patch.caissonIds = caissonIds;
+      if (emplacementsDirty) patch.emplacementIds = emplacementIds;
       await onSave(lot, patch);
       onClose();
     } finally {
@@ -173,22 +197,12 @@ export function LotDetailModal({
 
           <div className="space-y-1.5">
             <Label>Emplacements</Label>
-            <div className="flex flex-wrap gap-1.5 min-h-8 px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
-              {empNames.length > 0 ? (
-                empNames.map((n) => (
-                  <span
-                    key={n}
-                    className="text-xs font-mono px-2 py-0.5 rounded bg-stone-800 text-stone-50"
-                  >
-                    {n}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-stone-400 italic">
-                  Aucun emplacement
-                </span>
-              )}
-            </div>
+            <MultiCombobox
+              options={emplacementOptions}
+              values={emplacementIds}
+              onValuesChange={setEmplacementIds}
+              placeholder="Tapez une allée pour placer le lot…"
+            />
           </div>
 
           <div className="space-y-1.5">
