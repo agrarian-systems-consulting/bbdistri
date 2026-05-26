@@ -18,6 +18,8 @@ import type { Emplacement, LightLot } from "@/lib/types/domain";
 type Props = {
   emplacement: Emplacement | null;
   emplacementsById: Map<string, Emplacement>;
+  /** Liste préchargée et auto-refetched par HangarView via TanStack Query. */
+  addableLots: LightLot[] | null;
   onClose: () => void;
   onAdd: (lot: LightLot, emplacement: Emplacement) => Promise<void>;
 };
@@ -45,40 +47,21 @@ function StatutChip({ statut }: { statut: string }) {
 export function AddLotModal({
   emplacement,
   emplacementsById,
+  addableLots,
   onClose,
   onAdd,
 }: Props) {
-  const [allLots, setAllLots] = useState<LightLot[] | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedLotId, setSelectedLotId] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!emplacement) return;
     setSelectedLotId("");
-    setFetchError(null);
-    setAllLots(null);
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/lots/all");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { lots: LightLot[] };
-        if (!cancelled) setAllLots(data.lots);
-      } catch (err) {
-        if (!cancelled) {
-          setFetchError(err instanceof Error ? err.message : String(err));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [emplacement]);
 
   const options = useMemo<ComboboxOption[]>(() => {
-    if (!allLots) return [];
-    return allLots
+    if (!addableLots) return [];
+    return addableLots
       .slice()
       .sort((a, b) => a.nom.localeCompare(b.nom))
       .map((lot) => ({
@@ -86,11 +69,11 @@ export function AddLotModal({
         label: lot.produit ? `${lot.nom} — ${lot.produit}` : lot.nom,
         right: <StatutChip statut={lot.statut} />,
       }));
-  }, [allLots]);
+  }, [addableLots]);
 
   const selectedLot = useMemo(
-    () => allLots?.find((l) => l.id === selectedLotId) ?? null,
-    [allLots, selectedLotId],
+    () => addableLots?.find((l) => l.id === selectedLotId) ?? null,
+    [addableLots, selectedLotId],
   );
 
   if (!emplacement) {
@@ -147,13 +130,11 @@ export function AddLotModal({
               value={selectedLotId}
               onChange={setSelectedLotId}
               placeholder={
-                allLots === null
-                  ? fetchError
-                    ? `Erreur chargement : ${fetchError}`
-                    : "Chargement…"
-                  : `Rechercher parmi ${allLots.length} lots…`
+                addableLots === null
+                  ? "Chargement…"
+                  : `Rechercher parmi ${addableLots.length} lots…`
               }
-              disabled={allLots === null}
+              disabled={addableLots === null}
             />
             <p className="text-xs text-stone-500">
               Les lots au statut <em>Épuisé</em> ou <em>Non affecté</em>{" "}

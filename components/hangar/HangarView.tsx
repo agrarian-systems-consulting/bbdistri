@@ -14,6 +14,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   parseDraggableLotId,
@@ -109,6 +110,21 @@ export function HangarView({
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [addingToEmpId, setAddingToEmpId] = useState<string | null>(null);
   const [localLots, setLocalLots] = useState<Lot[]>(lots);
+
+  // Précharge en arrière-plan la liste légère des lots ajoutables (utilisée par
+  // AddLotModal). Rafraîchie toutes les 15 minutes pour suivre Airtable.
+  const { data: addableLots } = useQuery({
+    queryKey: ["lots", "addable"],
+    queryFn: async () => {
+      const res = await fetch("/api/lots/all");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { lots: LightLot[] };
+      return data.lots;
+    },
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
     setLocalLots(lots);
@@ -584,6 +600,7 @@ export function HangarView({
       <AddLotModal
         emplacement={addingToEmpId ? (empsById.get(addingToEmpId) ?? null) : null}
         emplacementsById={empsById}
+        addableLots={addableLots ?? null}
         onClose={() => setAddingToEmpId(null)}
         onAdd={handleAddLot}
       />
