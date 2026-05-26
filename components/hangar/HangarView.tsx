@@ -314,39 +314,51 @@ export function HangarView({
         ]);
       }
 
+      let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${lightLot.nom} → ${emp.name} : synchronisation…`,
-      );
-      try {
-        await patchLotEmplacements(lightLot.id, newIds);
-        toast.dismiss(loadingId);
-        toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
-          className: "toast-undo",
-          description:
-            previousIds.length > 0
-              ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
-              : "Placement initial",
+        {
           action: {
             label: "Annuler",
             onClick: () => {
-              const lotForUndo = localLots.find((l) => l.id === lightLot.id) ?? {
-                id: lightLot.id,
-                nom: lightLot.nom,
-                statut: lightLot.statut,
-                produit: lightLot.produit,
-                bioC2: null,
-                emplacementIds: newIds,
-                caissonIds: [],
-                destinationIds: [],
-                depotIds: [],
-                cleAllotement: null,
-                commentaire: null,
-              };
-              undoMove(lotForUndo, previousIds);
+              pendingCancel = true;
             },
           },
-          duration: 5000,
-        });
+        },
+      );
+      const buildLotForUndo = (): Lot =>
+        localLots.find((l) => l.id === lightLot.id) ?? {
+          id: lightLot.id,
+          nom: lightLot.nom,
+          statut: lightLot.statut,
+          produit: lightLot.produit,
+          bioC2: null,
+          emplacementIds: newIds,
+          caissonIds: [],
+          destinationIds: [],
+          depotIds: [],
+          cleAllotement: null,
+          commentaire: null,
+        };
+      try {
+        await patchLotEmplacements(lightLot.id, newIds);
+        toast.dismiss(loadingId);
+        if (pendingCancel) {
+          void undoMove(buildLotForUndo(), previousIds);
+        } else {
+          toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
+            className: "toast-undo",
+            description:
+              previousIds.length > 0
+                ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
+                : "Placement initial",
+            action: {
+              label: "Annuler",
+              onClick: () => undoMove(buildLotForUndo(), previousIds),
+            },
+            duration: 5000,
+          });
+        }
       } catch (err) {
         if (localLot) {
           applyLocalEmplacementsUpdate(lightLot.id, previousIds);
@@ -427,8 +439,17 @@ export function HangarView({
       setLocalLots((prev) =>
         prev.map((l) => (l.id === lot.id ? { ...l, ...effectivePatch } : l)),
       );
+      let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${lot.nom} : synchronisation en cours…`,
+        {
+          action: {
+            label: "Annuler",
+            onClick: () => {
+              pendingCancel = true;
+            },
+          },
+        },
       );
 
       try {
@@ -441,21 +462,25 @@ export function HangarView({
           destinationIds: effectivePatch.destinationIds,
         });
         toast.dismiss(loadingId);
-        const epuiseDetached =
-          patch.statut === "Epuisé" && lot.emplacementIds.length > 0;
-        toast(`Lot ${lot.nom} mis à jour`, {
-          className: "toast-undo",
-          description: epuiseDetached
-            ? `Statut → Epuisé · ${lot.emplacementIds.length} emplacement${lot.emplacementIds.length > 1 ? "s" : ""} détaché${lot.emplacementIds.length > 1 ? "s" : ""}`
-            : patch.statut
-              ? `Statut → ${patch.statut}`
-              : "Modification enregistrée",
-          action: {
-            label: "Annuler",
-            onClick: () => undoLotPatch(lot, previous),
-          },
-          duration: 5000,
-        });
+        if (pendingCancel) {
+          void undoLotPatch(lot, previous);
+        } else {
+          const epuiseDetached =
+            patch.statut === "Epuisé" && lot.emplacementIds.length > 0;
+          toast(`Lot ${lot.nom} mis à jour`, {
+            className: "toast-undo",
+            description: epuiseDetached
+              ? `Statut → Epuisé · ${lot.emplacementIds.length} emplacement${lot.emplacementIds.length > 1 ? "s" : ""} détaché${lot.emplacementIds.length > 1 ? "s" : ""}`
+              : patch.statut
+                ? `Statut → ${patch.statut}`
+                : "Modification enregistrée",
+            action: {
+              label: "Annuler",
+              onClick: () => undoLotPatch(lot, previous),
+            },
+            duration: 5000,
+          });
+        }
       } catch (err) {
         setLocalLots((prev) =>
           prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
@@ -474,20 +499,33 @@ export function HangarView({
       const previousIds = [...lot.emplacementIds];
       const newIds = [destEmp.id];
       applyLocalEmplacementsUpdate(lot.id, newIds);
+      let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${lot.nom} → ${destEmp.name} : synchronisation…`,
+        {
+          action: {
+            label: "Annuler",
+            onClick: () => {
+              pendingCancel = true;
+            },
+          },
+        },
       );
       try {
         await patchLotEmplacements(lot.id, newIds);
         toast.dismiss(loadingId);
-        toast(`Lot ${lot.nom} placé en ${destEmp.name}`, {
-          className: "toast-undo",
-          action: {
-            label: "Annuler",
-            onClick: () => undoMove(lot, previousIds),
-          },
-          duration: 5000,
-        });
+        if (pendingCancel) {
+          void undoMove(lot, previousIds);
+        } else {
+          toast(`Lot ${lot.nom} placé en ${destEmp.name}`, {
+            className: "toast-undo",
+            action: {
+              label: "Annuler",
+              onClick: () => undoMove(lot, previousIds),
+            },
+            duration: 5000,
+          });
+        }
       } catch (err) {
         applyLocalEmplacementsUpdate(lot.id, previousIds);
         toast.dismiss(loadingId);
@@ -536,28 +574,41 @@ export function HangarView({
       const newIds = computeNewEmplacementIds(ctx, action);
 
       applyLocalEmplacementsUpdate(ctx.lot.id, newIds);
+      let pendingCancel = false;
       const loadingId = toast.loading(
         `Lot ${ctx.lot.nom} → ${ctx.destEmp.name} : synchronisation…`,
+        {
+          action: {
+            label: "Annuler",
+            onClick: () => {
+              pendingCancel = true;
+            },
+          },
+        },
       );
 
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast.dismiss(loadingId);
-        toast(`Lot ${ctx.lot.nom} déplacé`, {
-          className: "toast-undo",
-          description: `${ctx.sourceEmp.name} → ${ctx.destEmp.name}${
-            action === "regroup-all"
-              ? " (regroupement total)"
-              : action === "merge"
-                ? " (fusion)"
-                : ""
-          }`,
-          action: {
-            label: "Annuler",
-            onClick: () => undoMove(ctx.lot, previousIds),
-          },
-          duration: 5000,
-        });
+        if (pendingCancel) {
+          void undoMove(ctx.lot, previousIds);
+        } else {
+          toast(`Lot ${ctx.lot.nom} déplacé`, {
+            className: "toast-undo",
+            description: `${ctx.sourceEmp.name} → ${ctx.destEmp.name}${
+              action === "regroup-all"
+                ? " (regroupement total)"
+                : action === "merge"
+                  ? " (fusion)"
+                  : ""
+            }`,
+            action: {
+              label: "Annuler",
+              onClick: () => undoMove(ctx.lot, previousIds),
+            },
+            duration: 5000,
+          });
+        }
       } catch (err) {
         applyLocalEmplacementsUpdate(ctx.lot.id, previousIds);
         toast.dismiss(loadingId);
