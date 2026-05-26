@@ -9,16 +9,41 @@ export function matchesSearch(lot: Lot, query: string): boolean {
 }
 
 /**
- * Groupes d'allotement = clés CléSuggestionAllotement partagées par ≥ 2 lots.
- * Un lot dont la clé est unique n'est PAS allotable (rien à regrouper avec).
+ * Clé d'allotement augmentée : on combine la CléSuggestionAllotement Airtable
+ * (Produit + Destination) avec le statut de triage. Deux lots ne peuvent
+ * être regroupés que s'ils ont le MÊME statut de triage en plus du même
+ * produit/destination (un Brut ne s'allote pas avec un Trié).
+ * Les statuts "Epuisé" et "Non affecté" sont exclus côté Airtable (formula
+ * renvoie chaîne vide) mais on garde la double sécurité ici.
+ */
+export function allotementKey(lot: Lot): string | null {
+  if (!lot.cleAllotement) return null;
+  if (lot.statut === "Epuisé" || lot.statut === "Non affecté") return null;
+  return `${lot.cleAllotement}|${lot.statut}`;
+}
+
+/**
+ * Parse une clé augmentée pour l'affichage : `cle|statut` → { cle, statut }
+ */
+export function parseAllotementKey(
+  key: string,
+): { cle: string; statut: string } {
+  const sep = key.lastIndexOf("|");
+  if (sep === -1) return { cle: key, statut: "" };
+  return { cle: key.slice(0, sep), statut: key.slice(sep + 1) };
+}
+
+/**
+ * Groupes d'allotement = clés (Produit+Destination+Statut) partagées par ≥ 2 lots.
  */
 export function computeAllotementGroups(lots: Lot[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const lot of lots) {
-    if (!lot.cleAllotement) continue;
-    const arr = map.get(lot.cleAllotement);
+    const key = allotementKey(lot);
+    if (!key) continue;
+    const arr = map.get(key);
     if (arr) arr.push(lot.id);
-    else map.set(lot.cleAllotement, [lot.id]);
+    else map.set(key, [lot.id]);
   }
   for (const [key, ids] of map.entries()) {
     if (ids.length < 2) map.delete(key);
@@ -48,7 +73,7 @@ export function shouldDimByFilter(
 ): boolean {
   if (activeStatuts.size > 0 && !activeStatuts.has(lot.statut)) return true;
   if (!matchesSearch(lot, searchQuery)) return true;
-  if (allotementHoveredKey && lot.cleAllotement !== allotementHoveredKey) {
+  if (allotementHoveredKey && allotementKey(lot) !== allotementHoveredKey) {
     return true;
   }
   return false;

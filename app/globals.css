@@ -325,7 +325,7 @@ body.allotement-on .footer-note {
   background: #fffbf0;
   border-left: 2px solid #f59e0b;
   overflow-y: auto;
-  z-index: 30;
+  z-index: 9000;
   padding: 14px 12px 18px;
   box-shadow: -4px 0 14px rgba(0, 0, 0, 0.1);
   display: flex;

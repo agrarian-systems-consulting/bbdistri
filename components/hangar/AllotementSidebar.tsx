@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { parseAllotementKey } from "@/lib/hangar/filters";
 import type { Lot } from "@/lib/types/domain";
 
 type Props = {
@@ -52,6 +53,7 @@ export function AllotementSidebar({
       ) : (
         <ul className="allotement-sidebar-list">
           {sorted.map(([key, lotIds]) => {
+            const { cle, statut } = parseAllotementKey(key);
             const sample = lotIds
               .slice(0, 4)
               .map((id) => lotsById.get(id)?.nom ?? id);
@@ -62,10 +64,10 @@ export function AllotementSidebar({
                 onMouseEnter={() => onHoverKey(key)}
                 onMouseLeave={() => onHoverKey(null)}
               >
-                <div className="allotement-item-key">{key}</div>
+                <div className="allotement-item-key">{cle}</div>
                 <div className="allotement-item-meta">
                   <span className="allotement-item-count">
-                    {lotIds.length} lots
+                    {lotIds.length} lots · statut {statut}
                   </span>
                   <span className="allotement-item-sample">
                     {sample.join(" · ")}
