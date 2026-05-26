@@ -13,6 +13,7 @@ const LOT_FIELDS = [
   "Caissons",
   "Destination",
   "CléSuggestionAllotement",
+  "Commentaire",
 ] as const;
 
 function normalizeBioC2(value: unknown): BioC2 | null {
@@ -26,6 +27,7 @@ function normalizeBioC2(value: unknown): BioC2 | null {
 function recordToLot(record: AirtableRecord<FieldSet>): Lot {
   const produitCourt = record.get("Produit (court)") as string[] | undefined;
   const cle = record.get("CléSuggestionAllotement");
+  const comm = record.get("Commentaire");
 
   return {
     id: record.id,
@@ -40,6 +42,7 @@ function recordToLot(record: AirtableRecord<FieldSet>): Lot {
     destinationIds: (record.get("Destination") as string[] | undefined) ?? [],
     depotIds: (record.get("Dépôt") as string[] | undefined) ?? [],
     cleAllotement: typeof cle === "string" && cle.length > 0 ? cle : null,
+    commentaire: typeof comm === "string" && comm.length > 0 ? comm : null,
   };
 }
 

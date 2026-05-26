@@ -8,9 +8,16 @@ import type { Lot } from "@/lib/types/domain";
 type Props = {
   lots: Lot[];
   onClose: () => void;
+  onLotClick: (lot: Lot) => void;
 };
 
-function UnplacedLotItem({ lot }: { lot: Lot }) {
+function UnplacedLotItem({
+  lot,
+  onLotClick,
+}: {
+  lot: Lot;
+  onLotClick: (lot: Lot) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: draggableLotId(UNPLACED_SOURCE, lot.id),
     data: { lotId: lot.id, sourceEmplacementId: UNPLACED_SOURCE },
@@ -19,6 +26,9 @@ function UnplacedLotItem({ lot }: { lot: Lot }) {
     <li
       ref={setNodeRef}
       className={`unplaced-item ${isDragging ? "dragging" : ""} ${statutClass(lot.statut)}`}
+      onClick={() => {
+        if (!isDragging) onLotClick(lot);
+      }}
       {...listeners}
       {...attributes}
     >
@@ -33,7 +43,7 @@ function UnplacedLotItem({ lot }: { lot: Lot }) {
   );
 }
 
-export function UnplacedSidebar({ lots, onClose }: Props) {
+export function UnplacedSidebar({ lots, onClose, onLotClick }: Props) {
   return (
     <aside className="side-panel">
       <header className="side-panel-header">
@@ -60,7 +70,11 @@ export function UnplacedSidebar({ lots, onClose }: Props) {
       ) : (
         <ul className="unplaced-list">
           {lots.map((lot) => (
-            <UnplacedLotItem key={lot.id} lot={lot} />
+            <UnplacedLotItem
+              key={lot.id}
+              lot={lot}
+              onLotClick={onLotClick}
+            />
           ))}
         </ul>
       )}

@@ -16,6 +16,7 @@ type Props = {
   allotableLotIds: Set<string>;
   allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
+  onLotClick: (lot: Lot) => void;
 };
 
 export function Allee({
@@ -28,6 +29,7 @@ export function Allee({
   allotableLotIds,
   allotementHoveredKey,
   onHoverChange,
+  onLotClick,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableEmplacementId(emplacement.id),
@@ -61,6 +63,7 @@ export function Allee({
             )}
             isAllotable={allotableLotIds.has(lot.id)}
             onHoverChange={onHoverChange}
+            onLotClick={onLotClick}
           />
         ))}
       </div>

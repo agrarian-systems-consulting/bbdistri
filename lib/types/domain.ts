@@ -24,6 +24,7 @@ export type Lot = {
   destinationIds: string[];
   depotIds: string[];
   cleAllotement: string | null;
+  commentaire: string | null;
 };
 
 export type Emplacement = {

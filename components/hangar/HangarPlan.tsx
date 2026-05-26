@@ -19,6 +19,7 @@ type Props = {
   fullscreenZone: ZoneType | null;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
+  onLotClick: (lot: Lot) => void;
 };
 
 export function HangarPlan(props: Props) {
@@ -35,6 +36,7 @@ export function HangarPlan(props: Props) {
     isFullscreen: props.fullscreenZone === zone,
     onToggleFullscreen: props.onToggleFullscreen,
     onHoverChange: props.onHoverChange,
+    onLotClick: props.onLotClick,
   });
 
   return (

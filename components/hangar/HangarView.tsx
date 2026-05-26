@@ -37,6 +37,7 @@ import type {
 } from "@/lib/types/domain";
 import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
+import { LotDetailModal, type LotPatch } from "./LotDetailModal";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { Topbar, type SidebarKind } from "./Topbar";
 import { UnplacedSidebar } from "./UnplacedSidebar";
@@ -53,19 +54,31 @@ type PendingMove = {
   destEmp: Emplacement;
 };
 
-async function patchLotEmplacements(
+async function patchLot(
   lotId: string,
-  emplacementIds: string[],
+  payload: {
+    emplacementIds?: string[];
+    statut?: string;
+    bioC2?: string | null;
+    commentaire?: string | null;
+  },
 ): Promise<void> {
   const res = await fetch(`/api/lots/${lotId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emplacementIds }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`PATCH lot ${lotId} échoué (${res.status}) : ${body}`);
   }
+}
+
+async function patchLotEmplacements(
+  lotId: string,
+  emplacementIds: string[],
+): Promise<void> {
+  return patchLot(lotId, { emplacementIds });
 }
 
 export function HangarView({ lots, emplacements, caissonsById }: Props) {
@@ -81,6 +94,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
   >(null);
   const [activeDragLotId, setActiveDragLotId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [localLots, setLocalLots] = useState<Lot[]>(lots);
 
   useEffect(() => {
@@ -212,6 +226,76 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
     [applyLocalEmplacementsUpdate],
   );
 
+  const handleLotClick = useCallback((lot: Lot) => {
+    setEditingLotId(lot.id);
+  }, []);
+
+  const undoLotPatch = useCallback(
+    async (lot: Lot, previous: Partial<Lot>) => {
+      setLocalLots((prev) =>
+        prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
+      );
+      try {
+        const payload: {
+          statut?: string;
+          bioC2?: string | null;
+          commentaire?: string | null;
+        } = {};
+        if (previous.statut !== undefined) payload.statut = previous.statut;
+        if (previous.bioC2 !== undefined) payload.bioC2 = previous.bioC2;
+        if (previous.commentaire !== undefined)
+          payload.commentaire = previous.commentaire;
+        await patchLot(lot.id, payload);
+        toast.success(`Lot ${lot.nom} : modification annulée`);
+      } catch (err) {
+        toast.error("Annulation échouée", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [],
+  );
+
+  const handleSaveLotPatch = useCallback(
+    async (lot: Lot, patch: LotPatch) => {
+      const previous: Partial<Lot> = {};
+      if (patch.statut !== undefined) previous.statut = lot.statut;
+      if (patch.bioC2 !== undefined) previous.bioC2 = lot.bioC2;
+      if (patch.commentaire !== undefined)
+        previous.commentaire = lot.commentaire;
+
+      setLocalLots((prev) =>
+        prev.map((l) => (l.id === lot.id ? { ...l, ...patch } : l)),
+      );
+
+      try {
+        await patchLot(lot.id, {
+          statut: patch.statut,
+          bioC2: patch.bioC2,
+          commentaire: patch.commentaire,
+        });
+        toast(`Lot ${lot.nom} mis à jour`, {
+          description: patch.statut
+            ? `Statut → ${patch.statut}`
+            : "Modification enregistrée",
+          action: {
+            label: "Annuler",
+            onClick: () => undoLotPatch(lot, previous),
+          },
+          duration: 5000,
+        });
+      } catch (err) {
+        setLocalLots((prev) =>
+          prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
+        );
+        toast.error("Modification échouée", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [undoLotPatch],
+  );
+
   const placeUnplaced = useCallback(
     async (lot: Lot, destEmp: Emplacement) => {
       const previousIds = [...lot.emplacementIds];
@@ -335,6 +419,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         fullscreenZone={fullscreenZone}
         onToggleFullscreen={toggleFullscreen}
         onHoverChange={setHoveredLotId}
+        onLotClick={handleLotClick}
       />
       <p className="footer-note">
         Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
@@ -354,12 +439,20 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         <UnplacedSidebar
           lots={unplacedLots}
           onClose={() => setOpenSidebar(null)}
+          onLotClick={handleLotClick}
         />
       ) : null}
       <MoveConfirmModal
         analysis={pendingAnalysis}
         onConfirm={handleConfirm}
         onCancel={() => setPendingMove(null)}
+      />
+      <LotDetailModal
+        lot={editingLotId ? (lotsById.get(editingLotId) ?? null) : null}
+        emplacementsById={empsById}
+        caissonsById={caissonsById}
+        onClose={() => setEditingLotId(null)}
+        onSave={handleSaveLotPatch}
       />
       <DragOverlay dropAnimation={null}>
         {activeDragLot ? (

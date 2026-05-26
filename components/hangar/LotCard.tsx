@@ -13,6 +13,7 @@ type Props = {
   isDimmed: boolean;
   isAllotable: boolean;
   onHoverChange: (lotId: string | null) => void;
+  onLotClick: (lot: Lot) => void;
 };
 
 export function LotCard({
@@ -23,6 +24,7 @@ export function LotCard({
   isDimmed,
   isAllotable,
   onHoverChange,
+  onLotClick,
 }: Props) {
   const dragId = draggableLotId(emplacementId, lot.id);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -53,6 +55,9 @@ export function LotCard({
       data-lot-id={lot.id}
       onMouseEnter={() => onHoverChange(lot.id)}
       onMouseLeave={() => onHoverChange(null)}
+      onClick={() => {
+        if (!isDragging) onLotClick(lot);
+      }}
       {...listeners}
       {...attributes}
     >

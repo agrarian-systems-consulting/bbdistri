@@ -33,6 +33,7 @@ type Props = {
   isFullscreen: boolean;
   onToggleFullscreen: (zone: ZoneType) => void;
   onHoverChange: (lotId: string | null) => void;
+  onLotClick: (lot: Lot) => void;
 };
 
 function VracDropZone({
@@ -45,6 +46,7 @@ function VracDropZone({
   allotableLotIds,
   allotementHoveredKey,
   onHoverChange,
+  onLotClick,
 }: {
   emplacement: Emplacement;
   lots: Lot[];
@@ -55,6 +57,7 @@ function VracDropZone({
   allotableLotIds: Set<string>;
   allotementHoveredKey: string | null;
   onHoverChange: (lotId: string | null) => void;
+  onLotClick: (lot: Lot) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableEmplacementId(emplacement.id),
@@ -81,6 +84,7 @@ function VracDropZone({
           )}
           isAllotable={allotableLotIds.has(lot.id)}
           onHoverChange={onHoverChange}
+          onLotClick={onLotClick}
         />
       ))}
     </div>
@@ -104,6 +108,7 @@ export function Zone(props: Props) {
     allotableLotIds: props.allotableLotIds,
     allotementHoveredKey: props.allotementHoveredKey,
     onHoverChange: props.onHoverChange,
+    onLotClick: props.onLotClick,
   };
 
   return (
