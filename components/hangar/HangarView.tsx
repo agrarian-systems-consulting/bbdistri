@@ -258,11 +258,13 @@ export function HangarView({
   const undoMove = useCallback(
     async (lot: Lot, previousIds: string[]) => {
       applyLocalEmplacementsUpdate(lot.id, previousIds);
+      const id = toast.loading(`Lot ${lot.nom} : annulation en cours…`);
       try {
         await patchLotEmplacements(lot.id, previousIds);
-        toast.success(`Lot ${lot.nom} : déplacement annulé`);
+        toast.success(`Lot ${lot.nom} : déplacement annulé`, { id });
       } catch (err) {
         toast.error("Annulation échouée", {
+          id,
           description: err instanceof Error ? err.message : String(err),
         });
       }
@@ -309,9 +311,13 @@ export function HangarView({
         ]);
       }
 
+      const toastId = toast.loading(
+        `Lot ${lightLot.nom} → ${emp.name} : synchronisation…`,
+      );
       try {
         await patchLotEmplacements(lightLot.id, newIds);
         toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
+          id: toastId,
           description:
             previousIds.length > 0
               ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
@@ -344,6 +350,7 @@ export function HangarView({
           setLocalLots((prev) => prev.filter((l) => l.id !== lightLot.id));
         }
         toast.error("Ajout échoué", {
+          id: toastId,
           description: err instanceof Error ? err.message : String(err),
         });
       }
@@ -356,6 +363,7 @@ export function HangarView({
       setLocalLots((prev) =>
         prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
       );
+      const id = toast.loading(`Lot ${lot.nom} : annulation en cours…`);
       try {
         const payload: {
           statut?: string;
@@ -376,9 +384,10 @@ export function HangarView({
         if (previous.destinationIds !== undefined)
           payload.destinationIds = previous.destinationIds;
         await patchLot(lot.id, payload);
-        toast.success(`Lot ${lot.nom} : modification annulée`);
+        toast.success(`Lot ${lot.nom} : modification annulée`, { id });
       } catch (err) {
         toast.error("Annulation échouée", {
+          id,
           description: err instanceof Error ? err.message : String(err),
         });
       }
@@ -411,6 +420,9 @@ export function HangarView({
       setLocalLots((prev) =>
         prev.map((l) => (l.id === lot.id ? { ...l, ...effectivePatch } : l)),
       );
+      const id = toast.loading(
+        `Lot ${lot.nom} : synchronisation en cours…`,
+      );
 
       try {
         await patchLot(lot.id, {
@@ -424,6 +436,7 @@ export function HangarView({
         const epuiseDetached =
           patch.statut === "Epuisé" && lot.emplacementIds.length > 0;
         toast(`Lot ${lot.nom} mis à jour`, {
+          id,
           description: epuiseDetached
             ? `Statut → Epuisé · ${lot.emplacementIds.length} emplacement${lot.emplacementIds.length > 1 ? "s" : ""} détaché${lot.emplacementIds.length > 1 ? "s" : ""}`
             : patch.statut
@@ -440,6 +453,7 @@ export function HangarView({
           prev.map((l) => (l.id === lot.id ? { ...l, ...previous } : l)),
         );
         toast.error("Modification échouée", {
+          id,
           description: err instanceof Error ? err.message : String(err),
         });
       }
@@ -452,9 +466,13 @@ export function HangarView({
       const previousIds = [...lot.emplacementIds];
       const newIds = [destEmp.id];
       applyLocalEmplacementsUpdate(lot.id, newIds);
+      const id = toast.loading(
+        `Lot ${lot.nom} → ${destEmp.name} : synchronisation…`,
+      );
       try {
         await patchLotEmplacements(lot.id, newIds);
         toast(`Lot ${lot.nom} placé en ${destEmp.name}`, {
+          id,
           action: {
             label: "Annuler",
             onClick: () => undoMove(lot, previousIds),
@@ -464,6 +482,7 @@ export function HangarView({
       } catch (err) {
         applyLocalEmplacementsUpdate(lot.id, previousIds);
         toast.error("Placement échoué", {
+          id,
           description: err instanceof Error ? err.message : String(err),
         });
       }
@@ -508,10 +527,14 @@ export function HangarView({
       const newIds = computeNewEmplacementIds(ctx, action);
 
       applyLocalEmplacementsUpdate(ctx.lot.id, newIds);
+      const id = toast.loading(
+        `Lot ${ctx.lot.nom} → ${ctx.destEmp.name} : synchronisation…`,
+      );
 
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast(`Lot ${ctx.lot.nom} déplacé`, {
+          id,
           description: `${ctx.sourceEmp.name} → ${ctx.destEmp.name}${
             action === "regroup-all"
               ? " (regroupement total)"
@@ -528,6 +551,7 @@ export function HangarView({
       } catch (err) {
         applyLocalEmplacementsUpdate(ctx.lot.id, previousIds);
         toast.error("Déplacement échoué", {
+          id,
           description: err instanceof Error ? err.message : String(err),
         });
       }
