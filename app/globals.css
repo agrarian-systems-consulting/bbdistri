@@ -161,6 +161,8 @@
 body.hangar-bg {
   background: var(--bg-page);
   color: #222;
+  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
 }
 
 /* Topbar */
@@ -183,6 +185,72 @@ body.hangar-bg {
   opacity: 0.7;
   margin-left: 8px;
 }
+/* Search bar (typeahead — branchement étape 6) */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  font-size: 0.78rem;
+}
+.search-wrap {
+  position: relative;
+}
+.search-bar input {
+  background: #1a140c;
+  border: 1px solid #4a3f30;
+  color: #f5f1ea;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  width: 220px;
+  outline: none;
+  font-family: inherit;
+}
+.search-bar input:focus { border-color: var(--statut-trie); }
+.search-bar button {
+  background: transparent;
+  border: 1px solid #4a3f30;
+  color: #f5f1ea;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  font-family: inherit;
+}
+.search-bar button:hover { opacity: 1; }
+
+/* Toggle allotements (groupage suggéré — branchement étape 6) */
+.allotement-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #4a3f30;
+  color: #f5f1ea;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 12px;
+  transition: all 0.15s;
+  opacity: 0.75;
+  font-family: inherit;
+}
+.allotement-toggle svg { width: 14px; height: 14px; }
+.allotement-toggle:hover {
+  opacity: 1;
+  background: rgba(245, 241, 234, 0.05);
+}
+.allotement-toggle.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #1a140c;
+  opacity: 1;
+}
+
 .legend {
   display: flex;
   gap: 8px;
@@ -209,7 +277,6 @@ body.hangar-bg {
 .hangar {
   margin: 14px;
   background: var(--hangar-floor);
-  border: 1px solid var(--allee-border);
   border-radius: 4px;
   display: grid;
   grid-template-rows: auto auto auto;
@@ -296,6 +363,28 @@ body.hangar-bg {
   gap: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+
+/* Bouton plein écran intégré au zone-label (branchement étape 6) */
+.fs-toggle {
+  pointer-events: auto;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  color: #6b5b4a;
+  transition: all 0.15s;
+}
+.fs-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #2b2418;
+}
+.fs-toggle svg { width: 12px; height: 12px; }
 
 .allees {
   display: grid;

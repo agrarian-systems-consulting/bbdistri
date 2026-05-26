@@ -15,50 +15,32 @@ export function HangarPlan({
   const zonePrep = empsParZone.get("PREP") ?? [];
   const zoneTampon = empsParZone.get("TAMPON") ?? [];
 
-  const hasA = zoneA.length > 0;
-  const hasB = zoneB.length > 0;
-  const hasC = zoneC.length > 0;
-  const hasPrep = zonePrep.length > 0;
-  const hasTampon = zoneTampon.length > 0;
-
   return (
     <main className="hangar">
-      <div className={`rang-haut ${hasPrep ? "" : "no-prep"}`}>
-        {hasA && (
-          <Zone
-            zone="A"
-            emplacements={sortEmplacements(zoneA, "A")}
-            lotsParEmp={lotsParEmp}
-          />
-        )}
-        {hasPrep && (
-          <>
-            <div className="passage-vertical">passage</div>
-            <Zone zone="PREP" emplacements={zonePrep} lotsParEmp={lotsParEmp} />
-          </>
-        )}
+      <div className="rang-haut">
+        <Zone
+          zone="A"
+          emplacements={sortEmplacements(zoneA, "A")}
+          lotsParEmp={lotsParEmp}
+        />
+        <div className="passage-vertical">passage</div>
+        <Zone zone="PREP" emplacements={zonePrep} lotsParEmp={lotsParEmp} />
       </div>
 
       <div className="allee-passage">— allée de passage —</div>
 
-      <div className={`rang-bas ${hasTampon ? "" : "no-tampon"}`}>
-        {hasC && (
-          <Zone
-            zone="C"
-            emplacements={sortEmplacements(zoneC, "C")}
-            lotsParEmp={lotsParEmp}
-          />
-        )}
-        {hasTampon && (
-          <Zone zone="TAMPON" emplacements={zoneTampon} lotsParEmp={lotsParEmp} />
-        )}
-        {hasB && (
-          <Zone
-            zone="B"
-            emplacements={sortEmplacements(zoneB, "B")}
-            lotsParEmp={lotsParEmp}
-          />
-        )}
+      <div className="rang-bas">
+        <Zone
+          zone="C"
+          emplacements={sortEmplacements(zoneC, "C")}
+          lotsParEmp={lotsParEmp}
+        />
+        <Zone zone="TAMPON" emplacements={zoneTampon} lotsParEmp={lotsParEmp} />
+        <Zone
+          zone="B"
+          emplacements={sortEmplacements(zoneB, "B")}
+          lotsParEmp={lotsParEmp}
+        />
       </div>
     </main>
   );

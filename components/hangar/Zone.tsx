@@ -23,7 +23,30 @@ export function Zone({
 
   return (
     <section className={`zone zone-${zone}`}>
-      <span className="zone-label">{ZONE_LABELS[zone]}</span>
+      <span className="zone-label">
+        {ZONE_LABELS[zone]}
+        <button
+          type="button"
+          className="fs-toggle"
+          data-fs={`zone-${zone}`}
+          title="Plein écran"
+          aria-label={`Plein écran ${ZONE_LABELS[zone]}`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="4 9 4 4 9 4" />
+            <polyline points="20 9 20 4 15 4" />
+            <polyline points="4 15 4 20 9 20" />
+            <polyline points="20 15 20 20 15 20" />
+          </svg>
+        </button>
+      </span>
       {vrac ? (
         <div className="prep-content">
           {emplacements.flatMap((emp) =>
