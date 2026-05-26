@@ -321,6 +321,7 @@ export function HangarView({
         await patchLotEmplacements(lightLot.id, newIds);
         toast.dismiss(loadingId);
         toast(`Lot ${lightLot.nom} ajouté en ${emp.name}`, {
+          className: "toast-undo",
           description:
             previousIds.length > 0
               ? `Fraction supplémentaire (${previousIds.length + 1} emplacements au total)`
@@ -443,6 +444,7 @@ export function HangarView({
         const epuiseDetached =
           patch.statut === "Epuisé" && lot.emplacementIds.length > 0;
         toast(`Lot ${lot.nom} mis à jour`, {
+          className: "toast-undo",
           description: epuiseDetached
             ? `Statut → Epuisé · ${lot.emplacementIds.length} emplacement${lot.emplacementIds.length > 1 ? "s" : ""} détaché${lot.emplacementIds.length > 1 ? "s" : ""}`
             : patch.statut
@@ -479,6 +481,7 @@ export function HangarView({
         await patchLotEmplacements(lot.id, newIds);
         toast.dismiss(loadingId);
         toast(`Lot ${lot.nom} placé en ${destEmp.name}`, {
+          className: "toast-undo",
           action: {
             label: "Annuler",
             onClick: () => undoMove(lot, previousIds),
@@ -541,6 +544,7 @@ export function HangarView({
         await patchLotEmplacements(ctx.lot.id, newIds);
         toast.dismiss(loadingId);
         toast(`Lot ${ctx.lot.nom} déplacé`, {
+          className: "toast-undo",
           description: `${ctx.sourceEmp.name} → ${ctx.destEmp.name}${
             action === "regroup-all"
               ? " (regroupement total)"

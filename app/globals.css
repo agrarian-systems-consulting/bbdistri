@@ -1002,13 +1002,13 @@ body.has-fullscreen::before {
   font-style: normal;
 }
 
-/* Barre "temps restant" : uniquement sur les toasts neutres avec action undo (data-type="normal").
-   Les toasts success/error/etc. (toast.success, toast.error) gardent leur look natif Sonner. */
-[data-sonner-toast][data-type="normal"] {
+/* Barre "temps restant" : uniquement sur les toasts marqués className "toast-undo".
+   On passe explicitement cette classe sur les success qui ont un bouton Annuler. */
+.toast-undo {
   position: relative !important;
   overflow: hidden !important;
 }
-[data-sonner-toast][data-type="normal"]::after {
+.toast-undo::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -1018,7 +1018,7 @@ body.has-fullscreen::before {
   background: #f59e0b;
   animation: toast-progress 5s linear forwards;
 }
-[data-sonner-toast][data-type="normal"]:hover::after {
+.toast-undo:hover::after {
   animation-play-state: paused;
 }
 @keyframes toast-progress {
