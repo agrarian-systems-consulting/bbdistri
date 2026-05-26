@@ -453,7 +453,7 @@ export function HangarView({
         empsParZone={empsParZone}
         lotsParEmp={lotsParEmp}
         caissonsById={caissonsById}
-        hoveredLotId={hoveredLotId}
+        hoveredLotId={activeDragLotId ? null : hoveredLotId}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
         allotableLotIds={allotableLotIds}
