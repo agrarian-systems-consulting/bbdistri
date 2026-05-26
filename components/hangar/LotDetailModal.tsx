@@ -70,7 +70,6 @@ export function LotDetailModal({
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
   const [emplacementIds, setEmplacementIds] = useState<string[]>([]);
   const [destinationIds, setDestinationIds] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!lot) return;
@@ -130,33 +129,24 @@ export function LotDetailModal({
       .map(({ value, label }) => ({ value, label }));
   })();
 
-  const submit = async () => {
-    if (!dirty || saving) return;
-    setSaving(true);
-    try {
-      const patch: LotPatch = {};
-      if (statut !== lot.statut) patch.statut = statut;
-      if (newBioC2 !== lot.bioC2) patch.bioC2 = newBioC2;
-      if (newCommentaire !== oldCommentaire) patch.commentaire = newCommentaire;
-      if (caissonsDirty) patch.caissonIds = caissonIds;
-      if (emplacementsDirty) patch.emplacementIds = emplacementIds;
-      if (destinationsDirty) patch.destinationIds = destinationIds;
-      await onSave(lot, patch);
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+  const submit = () => {
+    if (!dirty) return;
+    const patch: LotPatch = {};
+    if (statut !== lot.statut) patch.statut = statut;
+    if (newBioC2 !== lot.bioC2) patch.bioC2 = newBioC2;
+    if (newCommentaire !== oldCommentaire) patch.commentaire = newCommentaire;
+    if (caissonsDirty) patch.caissonIds = caissonIds;
+    if (emplacementsDirty) patch.emplacementIds = emplacementIds;
+    if (destinationsDirty) patch.destinationIds = destinationIds;
+    // Fire-and-forget : la modale ferme immédiatement, la synchro Airtable
+    // se voit dans le toast loading → success/error en bas à droite.
+    void onSave(lot, patch);
+    onClose();
   };
 
-  const markEpuise = async () => {
-    if (saving) return;
-    setSaving(true);
-    try {
-      await onSave(lot, { statut: "Epuisé" });
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+  const markEpuise = () => {
+    void onSave(lot, { statut: "Epuisé" });
+    onClose();
   };
 
   return (
@@ -264,17 +254,17 @@ export function LotDetailModal({
           <Button
             variant="ghost"
             onClick={markEpuise}
-            disabled={saving || lot.statut === "Epuisé"}
+            disabled={lot.statut === "Epuisé"}
             className="text-stone-600 hover:text-red-700"
           >
             Marquer épuisé
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={saving}>
+            <Button variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button onClick={submit} disabled={!dirty || saving}>
-              {saving ? "Enregistrement…" : "Enregistrer"}
+            <Button onClick={submit} disabled={!dirty}>
+              Enregistrer
             </Button>
           </div>
         </DialogFooter>
