@@ -371,7 +371,76 @@ body.allotement-on .footer-note {
   font-style: italic;
   margin: 0;
 }
-.allotement-sidebar-list {
+/* Accordéon des groupes d'allotement */
+.allotement-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.allotement-item {
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: rgba(245, 158, 11, 0.06);
+  transition: background 0.12s, border-color 0.12s;
+}
+.allotement-item.active,
+.allotement-item:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+}
+.allotement-trigger {
+  padding: 8px 10px !important;
+  cursor: pointer;
+  width: 100%;
+}
+.allotement-trigger:hover { text-decoration: none !important; }
+.allotement-trigger-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.allotement-trigger-code {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a140c;
+  letter-spacing: 0.02em;
+}
+.allotement-trigger-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.badge-lots,
+.badge-statut {
+  font-size: 0.62rem;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge-lots {
+  background: #92400e;
+  color: #fffbf0;
+}
+.badge-statut {
+  background: rgba(146, 64, 14, 0.15);
+  color: #92400e;
+  border: 1px solid rgba(146, 64, 14, 0.3);
+}
+.allotement-content {
+  padding: 0 10px 10px !important;
+}
+.allotement-libelle {
+  font-size: 0.7rem;
+  color: #4a3e29;
+  font-style: italic;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.allotement-lots-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -379,40 +448,41 @@ body.allotement-on .footer-note {
   flex-direction: column;
   gap: 4px;
 }
-.allotement-item {
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  background: rgba(245, 158, 11, 0.06);
-  transition: background 0.12s, border-color 0.12s;
+.allotement-lot-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
 }
-.allotement-item:hover,
-.allotement-item.active {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: #f59e0b;
-}
-.allotement-item-key {
+.allotement-lot-nom {
+  font-family: var(--font-mono), monospace;
   font-size: 0.72rem;
   font-weight: 600;
   color: #1a140c;
-  line-height: 1.3;
-  word-break: break-word;
+  word-break: break-all;
 }
-.allotement-item-meta {
-  margin-top: 4px;
+.allotement-lot-empls {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 0.65rem;
-  color: #92400e;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.allotement-item-count {
-  font-weight: 600;
+.emp-badge {
+  font-size: 0.62rem;
+  padding: 1px 6px;
+  background: #2b2418;
+  color: #f5f1ea;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-family: var(--font-mono), monospace;
 }
-.allotement-item-sample {
-  opacity: 0.85;
-  word-break: break-word;
+.emp-badge-empty {
+  background: transparent;
+  color: #8b7d65;
+  border: 1px dashed #b6a890;
 }
 
 /* Hangar conteneur */

@@ -297,6 +297,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         <AllotementSidebar
           groups={allotementGroups}
           lotsById={lotsById}
+          emplacementsById={empsById}
           hoveredKey={allotementHoveredKey}
           onHoverKey={setAllotementHoveredKey}
           onClose={toggleAllotement}

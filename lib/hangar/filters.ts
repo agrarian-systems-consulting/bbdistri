@@ -35,10 +35,14 @@ export function parseAllotementKey(
 
 /**
  * Groupes d'allotement = clés (Produit+Destination+Statut) partagées par ≥ 2 lots.
+ * Seuls les lots placés (au moins un emplacement) sont comptés : un lot sans
+ * emplacement n'apparaît pas dans le hangar, donc ne peut pas être candidat
+ * à un allotement physique.
  */
 export function computeAllotementGroups(lots: Lot[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const lot of lots) {
+    if (lot.emplacementIds.length === 0) continue;
     const key = allotementKey(lot);
     if (!key) continue;
     const arr = map.get(key);
