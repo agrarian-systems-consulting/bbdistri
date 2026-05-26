@@ -216,7 +216,9 @@ export function MultiCombobox({
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onMouseDown={() => {
+            if (!disabled) setOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? placeholder : ""}
           disabled={disabled}

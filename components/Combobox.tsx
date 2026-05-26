@@ -89,7 +89,6 @@ export function Combobox({
   }
 
   function handleFocus() {
-    setOpen(true);
     if (selected) setQuery("");
   }
 
@@ -222,6 +221,9 @@ export function Combobox({
           value={displayValue}
           onChange={handleInputChange}
           onFocus={handleFocus}
+          onMouseDown={() => {
+            if (!disabled) setOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
