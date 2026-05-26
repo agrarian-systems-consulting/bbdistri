@@ -145,6 +145,16 @@ export function LotDetailModal({
   };
 
   const markEpuise = () => {
+    const empCount = lot.emplacementIds.length;
+    if (empCount > 1) {
+      const empNames = lot.emplacementIds
+        .map((id) => emplacementsById.get(id)?.name ?? id)
+        .join(", ");
+      const ok = window.confirm(
+        `Le lot ${lot.nom} est présent sur ${empCount} emplacements (${empNames}).\n\nConfirmer que TOUT le lot est épuisé (pas seulement une fraction) ?\n\nTous les emplacements seront détachés.`,
+      );
+      if (!ok) return;
+    }
     void onSave(lot, { statut: "Epuisé" });
     onClose();
   };
