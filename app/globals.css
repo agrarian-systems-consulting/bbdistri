@@ -1014,21 +1014,26 @@ body.has-fullscreen::before {
 [data-sonner-toast].toast-undo::after,
 [data-sonner-toast]:has(> .toast-undo)::after,
 [data-sonner-toast]:has(.toast-undo-marker)::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #f59e0b;
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: #f59e0b !important;
   animation: toast-progress 5s linear forwards;
   pointer-events: none;
-  z-index: 10;
+  z-index: 100;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 [data-sonner-toast].toast-undo:hover::after,
 [data-sonner-toast]:has(> .toast-undo):hover::after,
 [data-sonner-toast]:has(.toast-undo-marker):hover::after {
   animation-play-state: paused;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 @keyframes toast-progress {
   from { width: 100%; }
