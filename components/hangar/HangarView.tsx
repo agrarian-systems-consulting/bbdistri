@@ -46,6 +46,7 @@ type Props = {
   lots: Lot[];
   emplacements: Emplacement[];
   caissonsById: Record<string, string>;
+  destinationsById: Record<string, string>;
 };
 
 type PendingMove = {
@@ -59,6 +60,7 @@ async function patchLot(
   payload: {
     emplacementIds?: string[];
     caissonIds?: string[];
+    destinationIds?: string[];
     statut?: string;
     bioC2?: string | null;
     commentaire?: string | null;
@@ -82,7 +84,12 @@ async function patchLotEmplacements(
   return patchLot(lotId, { emplacementIds });
 }
 
-export function HangarView({ lots, emplacements, caissonsById }: Props) {
+export function HangarView({
+  lots,
+  emplacements,
+  caissonsById,
+  destinationsById,
+}: Props) {
   const [hoveredLotId, setHoveredLotId] = useState<string | null>(null);
   const [fullscreenZone, setFullscreenZone] = useState<ZoneType | null>(null);
   const [activeStatuts, setActiveStatuts] = useState<Set<StatutTriage>>(
@@ -243,6 +250,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           commentaire?: string | null;
           caissonIds?: string[];
           emplacementIds?: string[];
+          destinationIds?: string[];
         } = {};
         if (previous.statut !== undefined) payload.statut = previous.statut;
         if (previous.bioC2 !== undefined) payload.bioC2 = previous.bioC2;
@@ -252,6 +260,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           payload.caissonIds = previous.caissonIds;
         if (previous.emplacementIds !== undefined)
           payload.emplacementIds = previous.emplacementIds;
+        if (previous.destinationIds !== undefined)
+          payload.destinationIds = previous.destinationIds;
         await patchLot(lot.id, payload);
         toast.success(`Lot ${lot.nom} : modification annulée`);
       } catch (err) {
@@ -274,6 +284,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         previous.caissonIds = lot.caissonIds;
       if (patch.emplacementIds !== undefined)
         previous.emplacementIds = lot.emplacementIds;
+      if (patch.destinationIds !== undefined)
+        previous.destinationIds = lot.destinationIds;
 
       setLocalLots((prev) =>
         prev.map((l) => (l.id === lot.id ? { ...l, ...patch } : l)),
@@ -286,6 +298,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           commentaire: patch.commentaire,
           caissonIds: patch.caissonIds,
           emplacementIds: patch.emplacementIds,
+          destinationIds: patch.destinationIds,
         });
         toast(`Lot ${lot.nom} mis à jour`, {
           description: patch.statut
@@ -464,6 +477,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
         lot={editingLotId ? (lotsById.get(editingLotId) ?? null) : null}
         emplacementsById={empsById}
         caissonsById={caissonsById}
+        destinationsById={destinationsById}
         onClose={() => setEditingLotId(null)}
         onSave={handleSaveLotPatch}
       />

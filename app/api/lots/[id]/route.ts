@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 type PatchBody = {
   emplacementIds?: string[];
   caissonIds?: string[];
+  destinationIds?: string[];
   statut?: StatutTriage;
   bioC2?: BioC2 | null;
   commentaire?: string | null;
@@ -56,6 +57,15 @@ export async function PATCH(
       );
     }
     fields.Caissons = body.caissonIds;
+  }
+  if (body.destinationIds !== undefined) {
+    if (!Array.isArray(body.destinationIds)) {
+      return NextResponse.json(
+        { error: "destinationIds doit être un tableau" },
+        { status: 400 },
+      );
+    }
+    fields.Destination = body.destinationIds;
   }
   if (body.statut !== undefined) {
     if (!isStatut(body.statut)) {

@@ -28,6 +28,7 @@ export type LotPatch = {
   commentaire?: string | null;
   caissonIds?: string[];
   emplacementIds?: string[];
+  destinationIds?: string[];
 };
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -40,6 +41,7 @@ type Props = {
   lot: Lot | null;
   emplacementsById: Map<string, Emplacement>;
   caissonsById: Record<string, string>;
+  destinationsById: Record<string, string>;
   onClose: () => void;
   onSave: (lot: Lot, patch: LotPatch) => Promise<void>;
 };
@@ -58,6 +60,7 @@ export function LotDetailModal({
   lot,
   emplacementsById,
   caissonsById,
+  destinationsById,
   onClose,
   onSave,
 }: Props) {
@@ -66,6 +69,7 @@ export function LotDetailModal({
   const [commentaire, setCommentaire] = useState("");
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
   const [emplacementIds, setEmplacementIds] = useState<string[]>([]);
+  const [destinationIds, setDestinationIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -75,6 +79,7 @@ export function LotDetailModal({
     setCommentaire(lot.commentaire ?? "");
     setCaissonIds(lot.caissonIds);
     setEmplacementIds(lot.emplacementIds);
+    setDestinationIds(lot.destinationIds);
   }, [lot]);
 
   if (!lot) {
@@ -90,12 +95,18 @@ export function LotDetailModal({
   const oldCommentaire = lot.commentaire;
   const caissonsDirty = !arraysEqual(caissonIds, lot.caissonIds);
   const emplacementsDirty = !arraysEqual(emplacementIds, lot.emplacementIds);
+  const destinationsDirty = !arraysEqual(destinationIds, lot.destinationIds);
   const dirty =
     statut !== lot.statut ||
     newBioC2 !== lot.bioC2 ||
     newCommentaire !== oldCommentaire ||
     caissonsDirty ||
-    emplacementsDirty;
+    emplacementsDirty ||
+    destinationsDirty;
+
+  const destinationOptions = Object.entries(destinationsById)
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   const emplacementOptions = (() => {
     const ZONE_ORDER: Record<string, number> = {
@@ -129,6 +140,7 @@ export function LotDetailModal({
       if (newCommentaire !== oldCommentaire) patch.commentaire = newCommentaire;
       if (caissonsDirty) patch.caissonIds = caissonIds;
       if (emplacementsDirty) patch.emplacementIds = emplacementIds;
+      if (destinationsDirty) patch.destinationIds = destinationIds;
       await onSave(lot, patch);
       onClose();
     } finally {
@@ -202,6 +214,16 @@ export function LotDetailModal({
               values={emplacementIds}
               onValuesChange={setEmplacementIds}
               placeholder="Tapez une allée pour placer le lot…"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Destinations</Label>
+            <MultiCombobox
+              options={destinationOptions}
+              values={destinationIds}
+              onValuesChange={setDestinationIds}
+              placeholder="Ajouter une destination…"
             />
           </div>
 

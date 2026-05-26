@@ -1,24 +1,32 @@
 import { HangarView } from "@/components/hangar/HangarView";
 import { fetchCaissonsById } from "@/lib/airtable/caissons";
+import { fetchDestinationsById } from "@/lib/airtable/destinations";
 import { fetchAllEmplacements } from "@/lib/airtable/emplacements";
 import { fetchHangarLots } from "@/lib/airtable/lots";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let lots, emplacements, caissonsById;
+  let lots, emplacements, caissonsById, destinationsById;
   let error: string | null = null;
   try {
-    [lots, emplacements, caissonsById] = await Promise.all([
+    [lots, emplacements, caissonsById, destinationsById] = await Promise.all([
       fetchHangarLots(),
       fetchAllEmplacements(),
       fetchCaissonsById(),
+      fetchDestinationsById(),
     ]);
   } catch (err) {
     error = err instanceof Error ? err.message : "Erreur inconnue";
   }
 
-  if (error || !lots || !emplacements || !caissonsById) {
+  if (
+    error ||
+    !lots ||
+    !emplacements ||
+    !caissonsById ||
+    !destinationsById
+  ) {
     return (
       <main className="flex flex-1 items-center justify-center p-8">
         <div className="max-w-xl space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-center">
@@ -39,6 +47,7 @@ export default async function Home() {
       lots={lots}
       emplacements={emplacements}
       caissonsById={caissonsById}
+      destinationsById={destinationsById}
     />
   );
 }
