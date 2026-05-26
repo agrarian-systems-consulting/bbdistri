@@ -112,7 +112,7 @@ export function HangarView({
   const [localLots, setLocalLots] = useState<Lot[]>(lots);
 
   // Précharge en arrière-plan la liste légère des lots ajoutables (utilisée par
-  // AddLotModal). Rafraîchie toutes les 15 minutes pour suivre Airtable.
+  // AddLotModal). Rafraîchie toutes les 5 minutes pour suivre Airtable.
   const { data: addableLots } = useQuery({
     queryKey: ["lots", "addable"],
     queryFn: async () => {
@@ -121,8 +121,8 @@ export function HangarView({
       const data = (await res.json()) as { lots: LightLot[] };
       return data.lots;
     },
-    staleTime: 15 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
