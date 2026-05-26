@@ -116,7 +116,12 @@ export function HangarView({
   // Source de vérité unique : tous les lots Hangar non-Épuisé.
   // Init depuis le fetch server-side (initialData), refetch 5 min en arrière-plan
   // pour suivre les modifs d'autres opérateurs ou les modifs directes Airtable.
-  const { data: lots = initialLots } = useQuery({
+  const {
+    data: lots = initialLots,
+    dataUpdatedAt,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: LOTS_QUERY_KEY,
     queryFn: async () => {
       const res = await fetch("/api/lots");
@@ -617,9 +622,14 @@ export function HangarView({
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
         openSidebar={openSidebar}
+        lastSyncedAt={dataUpdatedAt}
+        isSyncing={isFetching}
         onToggleStatut={toggleStatut}
         onSearchChange={setSearchQuery}
         onToggleSidebar={toggleSidebar}
+        onRefresh={() => {
+          void refetch();
+        }}
       />
       <HangarPlan
         empsParZone={empsParZone}
