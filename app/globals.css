@@ -858,7 +858,7 @@ body.unplaced-on .footer-note {
 }
 /* Pendant un drag, on masque le placeholder "+" pour éviter de polluer la cible visuelle */
 body.is-dragging .lot-add-placeholder {
-  display: none;
+  display: none !important;
 }
 .lot:hover {
   transform: translateY(-1px);

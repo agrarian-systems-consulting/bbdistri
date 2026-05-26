@@ -158,11 +158,6 @@ export function HangarView({
     return () => document.body.classList.remove("has-fullscreen");
   }, [fullscreenZone]);
 
-  useEffect(() => {
-    if (!activeDragLotId) return;
-    document.body.classList.add("is-dragging");
-    return () => document.body.classList.remove("is-dragging");
-  }, [activeDragLotId]);
 
   useEffect(() => {
     if (openSidebar === "allotements") {
@@ -229,6 +224,7 @@ export function HangarView({
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const parsed = parseDraggableLotId(String(event.active.id));
     if (parsed) setActiveDragLotId(parsed.lotId);
+    document.body.classList.add("is-dragging");
   }, []);
 
   const applyLocalEmplacementsUpdate = useCallback(
@@ -415,6 +411,7 @@ export function HangarView({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      document.body.classList.remove("is-dragging");
       setActiveDragLotId(null);
       const { active, over } = event;
       if (!over) return;
