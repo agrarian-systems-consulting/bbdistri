@@ -70,6 +70,7 @@ export function LotDetailModal({
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
   const [emplacementIds, setEmplacementIds] = useState<string[]>([]);
   const [destinationIds, setDestinationIds] = useState<string[]>([]);
+  const [confirmEpuiseOpen, setConfirmEpuiseOpen] = useState(false);
 
   useEffect(() => {
     if (!lot) return;
@@ -144,20 +145,24 @@ export function LotDetailModal({
     onClose();
   };
 
-  const markEpuise = () => {
-    const empCount = lot.emplacementIds.length;
-    if (empCount > 1) {
-      const empNames = lot.emplacementIds
-        .map((id) => emplacementsById.get(id)?.name ?? id)
-        .join(", ");
-      const ok = window.confirm(
-        `Le lot ${lot.nom} est présent sur ${empCount} emplacements (${empNames}).\n\nConfirmer que TOUT le lot est épuisé (pas seulement une fraction) ?\n\nTous les emplacements seront détachés.`,
-      );
-      if (!ok) return;
-    }
+  const performEpuise = () => {
     void onSave(lot, { statut: "Epuisé" });
+    setConfirmEpuiseOpen(false);
     onClose();
   };
+
+  const markEpuise = () => {
+    if (lot.emplacementIds.length > 1) {
+      setConfirmEpuiseOpen(true);
+      return;
+    }
+    performEpuise();
+  };
+
+  const empCount = lot.emplacementIds.length;
+  const empNamesList = lot.emplacementIds
+    .map((id) => emplacementsById.get(id)?.name ?? id)
+    .filter(Boolean);
 
   return (
     <Dialog
@@ -279,6 +284,61 @@ export function LotDetailModal({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <Dialog
+        open={confirmEpuiseOpen}
+        onOpenChange={(next) => {
+          if (!next) setConfirmEpuiseOpen(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Marquer le lot comme épuisé ?</DialogTitle>
+            <DialogDescription>
+              Ce lot est présent sur{" "}
+              <span className="font-semibold text-stone-900">
+                {empCount} emplacements
+              </span>
+              . Es-tu sûr que <strong>tout</strong> le lot est épuisé, pas
+              seulement une fraction&nbsp;?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <div className="text-xs text-stone-500">
+              Emplacements actuellement liés :
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {empNamesList.map((n) => (
+                <span
+                  key={n}
+                  className="font-mono text-xs px-2 py-0.5 rounded bg-stone-800 text-stone-50"
+                >
+                  {n}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-amber-700 pt-2">
+              Tous ces emplacements seront détachés du lot.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmEpuiseOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={performEpuise}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Oui, marquer épuisé
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
