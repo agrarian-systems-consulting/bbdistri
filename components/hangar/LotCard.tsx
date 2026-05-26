@@ -64,10 +64,13 @@ export function LotCard({
       <div className="lot-num">{lot.nom}</div>
       {lot.produit ? <div className="lot-produit">{lot.produit}</div> : null}
       {caissonNumeros.length > 0 ? (
-        <div className="lot-caissons">
+        <div
+          className="lot-caissons"
+          title={caissonNumeros.map((n) => `Caisson ${n}`).join(", ")}
+        >
           {caissonNumeros.map((num) => (
             <span key={num} className="lot-caisson-tag">
-              Caisson {num}
+              {num}
             </span>
           ))}
         </div>
