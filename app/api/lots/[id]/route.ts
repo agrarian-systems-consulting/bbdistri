@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 type PatchBody = {
   emplacementIds?: string[];
+  caissonIds?: string[];
   statut?: StatutTriage;
   bioC2?: BioC2 | null;
   commentaire?: string | null;
@@ -46,6 +47,15 @@ export async function PATCH(
       );
     }
     fields.Emplacements = body.emplacementIds;
+  }
+  if (body.caissonIds !== undefined) {
+    if (!Array.isArray(body.caissonIds)) {
+      return NextResponse.json(
+        { error: "caissonIds doit être un tableau" },
+        { status: 400 },
+      );
+    }
+    fields.Caissons = body.caissonIds;
   }
   if (body.statut !== undefined) {
     if (!isStatut(body.statut)) {

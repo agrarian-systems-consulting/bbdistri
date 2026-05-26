@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,7 +32,14 @@ export type LotPatch = {
   statut?: StatutTriage;
   bioC2?: BioC2 | null;
   commentaire?: string | null;
+  caissonIds?: string[];
 };
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
 
 type Props = {
   lot: Lot | null;
@@ -61,13 +69,25 @@ export function LotDetailModal({
   const [statut, setStatut] = useState<StatutTriage>("Brut");
   const [bioC2, setBioC2] = useState<BioC2Choice>("none");
   const [commentaire, setCommentaire] = useState("");
+  const [caissonIds, setCaissonIds] = useState<string[]>([]);
+  const [caissonInput, setCaissonInput] = useState("");
+  const [caissonError, setCaissonError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const idByNumero = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [id, num] of Object.entries(caissonsById)) m.set(num, id);
+    return m;
+  }, [caissonsById]);
 
   useEffect(() => {
     if (!lot) return;
     setStatut(lot.statut);
     setBioC2(bioC2ToChoice(lot.bioC2));
     setCommentaire(lot.commentaire ?? "");
+    setCaissonIds(lot.caissonIds);
+    setCaissonInput("");
+    setCaissonError(null);
   }, [lot]);
 
   if (!lot) {
@@ -81,17 +101,40 @@ export function LotDetailModal({
   const empNames = lot.emplacementIds
     .map((id) => emplacementsById.get(id)?.name)
     .filter((n): n is string => Boolean(n));
-  const caissonNumeros = lot.caissonIds
-    .map((id) => caissonsById[id])
-    .filter((n): n is string => Boolean(n));
 
   const newBioC2 = choiceToBioC2(bioC2);
   const newCommentaire = commentaire.trim() === "" ? null : commentaire;
   const oldCommentaire = lot.commentaire;
+  const caissonsDirty = !arraysEqual(caissonIds, lot.caissonIds);
   const dirty =
     statut !== lot.statut ||
     newBioC2 !== lot.bioC2 ||
-    newCommentaire !== oldCommentaire;
+    newCommentaire !== oldCommentaire ||
+    caissonsDirty;
+
+  const tryAddCaisson = () => {
+    const numero = caissonInput.trim();
+    if (!numero) return;
+    const id = idByNumero.get(numero);
+    if (!id) {
+      setCaissonError(
+        `Caisson n°${numero} introuvable. Créer le caisson dans Airtable d'abord.`,
+      );
+      return;
+    }
+    if (caissonIds.includes(id)) {
+      setCaissonError(`Caisson n°${numero} déjà sur ce lot.`);
+      return;
+    }
+    setCaissonIds([...caissonIds, id]);
+    setCaissonInput("");
+    setCaissonError(null);
+  };
+
+  const removeCaisson = (id: string) => {
+    setCaissonIds(caissonIds.filter((x) => x !== id));
+    setCaissonError(null);
+  };
 
   const submit = async () => {
     if (!dirty || saving) return;
@@ -101,6 +144,7 @@ export function LotDetailModal({
       if (statut !== lot.statut) patch.statut = statut;
       if (newBioC2 !== lot.bioC2) patch.bioC2 = newBioC2;
       if (newCommentaire !== oldCommentaire) patch.commentaire = newCommentaire;
+      if (caissonsDirty) patch.caissonIds = caissonIds;
       await onSave(lot, patch);
       onClose();
     } finally {
@@ -195,23 +239,62 @@ export function LotDetailModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Caissons</Label>
+            <Label>Caissons métalliques</Label>
             <div className="flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 border border-stone-200 rounded-md bg-stone-50">
-              {caissonNumeros.length > 0 ? (
-                caissonNumeros.map((n) => (
-                  <span
-                    key={n}
-                    className="text-xs px-2 py-0.5 rounded bg-amber-700 text-amber-50"
-                  >
-                    Caisson {n}
-                  </span>
-                ))
+              {caissonIds.length > 0 ? (
+                caissonIds.map((id) => {
+                  const num = caissonsById[id] ?? id;
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded bg-amber-700 text-amber-50"
+                    >
+                      Caisson {num}
+                      <button
+                        type="button"
+                        onClick={() => removeCaisson(id)}
+                        className="hover:text-amber-100 leading-none text-sm"
+                        aria-label={`Retirer caisson ${num}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })
               ) : (
                 <span className="text-xs text-stone-400 italic">
                   Aucun caisson
                 </span>
               )}
             </div>
+            <div className="flex gap-2 items-start">
+              <Input
+                value={caissonInput}
+                onChange={(e) => {
+                  setCaissonInput(e.target.value);
+                  if (caissonError) setCaissonError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    tryAddCaisson();
+                  }
+                }}
+                placeholder="N° de caisson à ajouter"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={tryAddCaisson}
+                disabled={caissonInput.trim().length === 0}
+              >
+                Ajouter
+              </Button>
+            </div>
+            {caissonError ? (
+              <p className="text-xs text-red-600">{caissonError}</p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">

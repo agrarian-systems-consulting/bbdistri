@@ -58,6 +58,7 @@ async function patchLot(
   lotId: string,
   payload: {
     emplacementIds?: string[];
+    caissonIds?: string[];
     statut?: string;
     bioC2?: string | null;
     commentaire?: string | null;
@@ -240,11 +241,14 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           statut?: string;
           bioC2?: string | null;
           commentaire?: string | null;
+          caissonIds?: string[];
         } = {};
         if (previous.statut !== undefined) payload.statut = previous.statut;
         if (previous.bioC2 !== undefined) payload.bioC2 = previous.bioC2;
         if (previous.commentaire !== undefined)
           payload.commentaire = previous.commentaire;
+        if (previous.caissonIds !== undefined)
+          payload.caissonIds = previous.caissonIds;
         await patchLot(lot.id, payload);
         toast.success(`Lot ${lot.nom} : modification annulée`);
       } catch (err) {
@@ -263,6 +267,8 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
       if (patch.bioC2 !== undefined) previous.bioC2 = lot.bioC2;
       if (patch.commentaire !== undefined)
         previous.commentaire = lot.commentaire;
+      if (patch.caissonIds !== undefined)
+        previous.caissonIds = lot.caissonIds;
 
       setLocalLots((prev) =>
         prev.map((l) => (l.id === lot.id ? { ...l, ...patch } : l)),
@@ -273,6 +279,7 @@ export function HangarView({ lots, emplacements, caissonsById }: Props) {
           statut: patch.statut,
           bioC2: patch.bioC2,
           commentaire: patch.commentaire,
+          caissonIds: patch.caissonIds,
         });
         toast(`Lot ${lot.nom} mis à jour`, {
           description: patch.statut
