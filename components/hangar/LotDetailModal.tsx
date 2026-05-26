@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -70,15 +69,7 @@ export function LotDetailModal({
   const [bioC2, setBioC2] = useState<BioC2Choice>("none");
   const [commentaire, setCommentaire] = useState("");
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
-  const [caissonInput, setCaissonInput] = useState("");
-  const [caissonError, setCaissonError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const idByNumero = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const [id, num] of Object.entries(caissonsById)) m.set(num, id);
-    return m;
-  }, [caissonsById]);
 
   useEffect(() => {
     if (!lot) return;
@@ -86,9 +77,20 @@ export function LotDetailModal({
     setBioC2(bioC2ToChoice(lot.bioC2));
     setCommentaire(lot.commentaire ?? "");
     setCaissonIds(lot.caissonIds);
-    setCaissonInput("");
-    setCaissonError(null);
   }, [lot]);
+
+  const availableCaissons = useMemo(() => {
+    const attached = new Set(caissonIds);
+    return Object.entries(caissonsById)
+      .filter(([id]) => !attached.has(id))
+      .map(([id, numero]) => ({ id, numero }))
+      .sort((a, b) => {
+        const an = Number(a.numero);
+        const bn = Number(b.numero);
+        if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
+        return a.numero.localeCompare(b.numero);
+      });
+  }, [caissonsById, caissonIds]);
 
   if (!lot) {
     return (
@@ -112,28 +114,13 @@ export function LotDetailModal({
     newCommentaire !== oldCommentaire ||
     caissonsDirty;
 
-  const tryAddCaisson = () => {
-    const numero = caissonInput.trim();
-    if (!numero) return;
-    const id = idByNumero.get(numero);
-    if (!id) {
-      setCaissonError(
-        `Caisson n°${numero} introuvable. Créer le caisson dans Airtable d'abord.`,
-      );
-      return;
-    }
-    if (caissonIds.includes(id)) {
-      setCaissonError(`Caisson n°${numero} déjà sur ce lot.`);
-      return;
-    }
+  const addCaisson = (id: string) => {
+    if (caissonIds.includes(id)) return;
     setCaissonIds([...caissonIds, id]);
-    setCaissonInput("");
-    setCaissonError(null);
   };
 
   const removeCaisson = (id: string) => {
     setCaissonIds(caissonIds.filter((x) => x !== id));
-    setCaissonError(null);
   };
 
   const submit = async () => {
@@ -267,34 +254,30 @@ export function LotDetailModal({
                 </span>
               )}
             </div>
-            <div className="flex gap-2 items-start">
-              <Input
-                value={caissonInput}
-                onChange={(e) => {
-                  setCaissonInput(e.target.value);
-                  if (caissonError) setCaissonError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    tryAddCaisson();
+            <Select
+              value=""
+              onValueChange={(id) => {
+                if (typeof id === "string" && id.length > 0) addCaisson(id);
+              }}
+              disabled={availableCaissons.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    availableCaissons.length === 0
+                      ? "Aucun caisson disponible"
+                      : "Ajouter un caisson…"
                   }
-                }}
-                placeholder="N° de caisson à ajouter"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={tryAddCaisson}
-                disabled={caissonInput.trim().length === 0}
-              >
-                Ajouter
-              </Button>
-            </div>
-            {caissonError ? (
-              <p className="text-xs text-red-600">{caissonError}</p>
-            ) : null}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCaissons.map(({ id, numero }) => (
+                  <SelectItem key={id} value={id}>
+                    Caisson {numero}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">
