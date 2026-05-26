@@ -950,3 +950,26 @@ body.has-fullscreen::before {
   color: #4a3e29;
   font-style: normal;
 }
+
+/* Barre de progression "temps restant" sur les toasts Sonner (durée 5s par défaut) */
+[data-sonner-toast] {
+  position: relative !important;
+  overflow: hidden !important;
+}
+[data-sonner-toast]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: #f59e0b;
+  animation: toast-progress 5s linear forwards;
+}
+[data-sonner-toast]:hover::after {
+  animation-play-state: paused;
+}
+@keyframes toast-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
