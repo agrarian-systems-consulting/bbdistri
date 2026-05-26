@@ -201,7 +201,7 @@ export function MultiCombobox({
                 e.stopPropagation();
                 removeValue(opt.value);
               }}
-              className="hover:text-amber-100 leading-none text-sm"
+              className="cursor-pointer hover:text-amber-100 leading-none text-sm disabled:cursor-not-allowed"
               aria-label={`Retirer ${opt.label}`}
               disabled={disabled}
             >
@@ -222,7 +222,7 @@ export function MultiCombobox({
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? placeholder : ""}
           disabled={disabled}
-          className="flex-1 min-w-[80px] bg-transparent py-0.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none disabled:cursor-not-allowed"
+          className="flex-1 min-w-20 bg-transparent py-0.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none disabled:cursor-not-allowed"
         />
       </div>
       {typeof window !== "undefined" &&
