@@ -1,10 +1,10 @@
 "use client";
 
-import { Combine, RefreshCw } from "lucide-react";
+import { Combine, History, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { StatutTriage } from "@/lib/types/domain";
 
-export type SidebarKind = "allotements" | "unplaced";
+export type SidebarKind = "allotements" | "unplaced" | "historique";
 
 type Props = {
   totalLots: number;
@@ -142,6 +142,16 @@ export function Topbar({
         >
           <Combine />
           <span>Allotements</span>
+        </button>
+        <button
+          type="button"
+          className={`history-toggle ${openSidebar === "historique" ? "active" : ""}`}
+          onClick={() => onToggleSidebar("historique")}
+          aria-pressed={openSidebar === "historique"}
+          title="Historique des changements de statut et d'emplacement"
+        >
+          <History />
+          <span>Historique</span>
         </button>
         <div className="legend">
           {LEGEND_STATUTS.map(({ label, statut, color }) => {

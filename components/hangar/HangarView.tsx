@@ -41,6 +41,7 @@ import type {
 import { AddLotModal } from "./AddLotModal";
 import { AllotementSidebar } from "./AllotementSidebar";
 import { HangarPlan } from "./HangarPlan";
+import { HistorySidebar } from "./HistorySidebar";
 import { LotDetailModal, type LotPatch } from "./LotDetailModal";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { Topbar, type SidebarKind } from "./Topbar";
@@ -218,6 +219,10 @@ export function HangarView({
       document.body.classList.add("unplaced-on");
       return () => document.body.classList.remove("unplaced-on");
     }
+    if (openSidebar === "historique") {
+      document.body.classList.add("historique-on");
+      return () => document.body.classList.remove("historique-on");
+    }
   }, [openSidebar]);
 
   useEffect(() => {
@@ -285,6 +290,7 @@ export function HangarView({
       );
       try {
         await patchLotEmplacements(lot.id, previousIds);
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : déplacement annulé`);
       } catch (err) {
@@ -327,6 +333,7 @@ export function HangarView({
       );
       try {
         await patchLotEmplacements(lot.id, newIds);
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         if (pendingCancel) {
           void undoMove({ ...lot, emplacementIds: newIds }, previousIds);
@@ -382,6 +389,7 @@ export function HangarView({
         if (previous.destinationIds !== undefined)
           payload.destinationIds = previous.destinationIds;
         await patchLot(lot.id, payload);
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         toast.success(`Lot ${lot.nom} : modification annulée`);
       } catch (err) {
@@ -440,6 +448,7 @@ export function HangarView({
           emplacementIds: effectivePatch.emplacementIds,
           destinationIds: effectivePatch.destinationIds,
         });
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         if (pendingCancel) {
           void undoLotPatch(lot, previous);
@@ -490,6 +499,7 @@ export function HangarView({
       );
       try {
         await patchLotEmplacements(lot.id, newIds);
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         if (pendingCancel) {
           void undoMove(lot, previousIds);
@@ -566,6 +576,7 @@ export function HangarView({
 
       try {
         await patchLotEmplacements(ctx.lot.id, newIds);
+        void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
         if (pendingCancel) {
           void undoMove(ctx.lot, previousIds);
@@ -666,6 +677,9 @@ export function HangarView({
           onClose={() => setOpenSidebar(null)}
           onLotClick={handleLotClick}
         />
+      ) : null}
+      {openSidebar === "historique" ? (
+        <HistorySidebar onClose={() => setOpenSidebar(null)} />
       ) : null}
       <MoveConfirmModal
         analysis={pendingAnalysis}

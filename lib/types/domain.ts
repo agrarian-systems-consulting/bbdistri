@@ -51,3 +51,21 @@ export type HangarSnapshot = {
   lots: Lot[];
   emplacements: Emplacement[];
 };
+
+/**
+ * Entrée du journal "Log sur lots" : un changement de statut et/ou
+ * d'emplacement sur un lot. Les noms (lot, emplacements) sont déjà résolus
+ * côté serveur pour l'affichage. Les statuts sont les valeurs brutes Airtable.
+ */
+export type LotLog = {
+  id: string;
+  date: string;
+  lotId: string | null;
+  lotNom: string;
+  types: string[];
+  statutInitial: string | null;
+  statutFinal: string | null;
+  emplacementsInitiaux: string[];
+  emplacementsFinaux: string[];
+  modifiePar: string | null;
+};

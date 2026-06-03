@@ -23,6 +23,55 @@ function isBioC2OrNull(v: unknown): v is BioC2 | null {
   return v === null || v === "Bio" || v === "C2";
 }
 
+function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sb = new Set(b);
+  for (const id of a) {
+    if (!sb.has(id)) return false;
+  }
+  return true;
+}
+
+type InitialLotState = {
+  statut: string | null;
+  emplacements: string[];
+};
+
+async function fetchInitialState(id: string): Promise<InitialLotState | null> {
+  try {
+    const record = await getBase()(TABLE_IDS.Lots).find(id);
+    const statut = record.get("Statut triage");
+    const emplacements = record.get("Emplacements");
+    return {
+      statut: typeof statut === "string" ? statut : null,
+      emplacements: Array.isArray(emplacements) ? (emplacements as string[]) : [],
+    };
+  } catch (err) {
+    console.error(`[/api/lots/${id}] fetch initial state failed:`, err);
+    return null;
+  }
+}
+
+async function createLogEntry(params: {
+  lotId: string;
+  initial: InitialLotState;
+  finalStatut: string | null;
+  finalEmplacements: string[];
+  types: string[];
+}): Promise<void> {
+  const fields: Partial<FieldSet> = {
+    Date: new Date().toISOString(),
+    Lot: [params.lotId],
+    "Type événement": params.types,
+    "Emplacements initiaux": params.initial.emplacements,
+    "Emplacements finaux": params.finalEmplacements,
+    "Modifié par": "Hangar app",
+  };
+  if (params.initial.statut) fields["Statut initial"] = params.initial.statut;
+  if (params.finalStatut) fields["Statut final"] = params.finalStatut;
+  await getBase()(TABLE_IDS.LogsLots).create(fields);
+}
+
 export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -112,12 +161,51 @@ export async function PATCH(
     return NextResponse.json({ ok: true, dryRun: true, id, fields });
   }
 
+  // Capture l'état initial avant update si statut ou emplacements sont touchés
+  // (les seuls champs qu'on logge pour le moment).
+  const shouldLog =
+    body.statut !== undefined || body.emplacementIds !== undefined;
+  const initialState = shouldLog ? await fetchInitialState(id) : null;
+
   try {
     await getBase()(TABLE_IDS.Lots).update(id, fields);
-    return NextResponse.json({ ok: true, dryRun: false, id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur Airtable";
     console.error(`[/api/lots/${id}] PATCH failed:`, err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
+
+  if (shouldLog && initialState) {
+    const finalStatut =
+      typeof fields["Statut triage"] === "string"
+        ? (fields["Statut triage"] as string)
+        : initialState.statut;
+    const finalEmplacements = Array.isArray(fields.Emplacements)
+      ? (fields.Emplacements as string[])
+      : initialState.emplacements;
+    const statutChanged = finalStatut !== initialState.statut;
+    const emplacementsChanged = !sameIdSet(
+      initialState.emplacements,
+      finalEmplacements,
+    );
+    if (statutChanged || emplacementsChanged) {
+      const types: string[] = [];
+      if (statutChanged) types.push("statut");
+      if (emplacementsChanged) types.push("emplacement");
+      try {
+        await createLogEntry({
+          lotId: id,
+          initial: initialState,
+          finalStatut,
+          finalEmplacements,
+          types,
+        });
+      } catch (err) {
+        // On ne fait pas échouer le PATCH si le log échoue — c'est annexe.
+        console.error(`[/api/lots/${id}] log create failed:`, err);
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, dryRun: false, id });
 }

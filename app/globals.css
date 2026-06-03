@@ -329,6 +329,36 @@ body.hangar-bg {
   opacity: 1;
 }
 
+/* Toggle historique des mouvements */
+.history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #4a3f30;
+  color: #f5f1ea;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 12px;
+  transition: all 0.15s;
+  opacity: 0.75;
+  font-family: inherit;
+}
+.history-toggle svg { width: 14px; height: 14px; }
+.history-toggle:hover {
+  opacity: 1;
+  background: rgba(245, 241, 234, 0.05);
+}
+.history-toggle.active {
+  background: #f5f1ea;
+  border-color: #f5f1ea;
+  color: #1a140c;
+  opacity: 1;
+}
+
 .legend {
   display: flex;
   gap: 8px;
@@ -391,7 +421,9 @@ body.allotement-on .lot.allotable::after {
 body.allotement-on .hangar,
 body.allotement-on .footer-note,
 body.unplaced-on .hangar,
-body.unplaced-on .footer-note {
+body.unplaced-on .footer-note,
+body.historique-on .hangar,
+body.historique-on .footer-note {
   margin-right: 440px;
 }
 
@@ -452,6 +484,222 @@ body.unplaced-on .footer-note {
   color: #6b7280;
   font-style: italic;
   margin: 0;
+}
+
+/* En-tête historique : groupe rafraîchir + fermer */
+.history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Timeline des mouvements */
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.history-item {
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #d54401;
+  border-radius: 6px;
+  background: #fafafa;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.history-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.history-lot {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #1a140c;
+  font-variant-numeric: tabular-nums;
+}
+.history-date {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.history-transition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #4b5563;
+  flex-wrap: wrap;
+}
+.history-transition-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+  font-weight: 600;
+  min-width: 76px;
+}
+.history-val {
+  color: #6b7280;
+}
+.history-val-final {
+  color: #1a140c;
+  font-weight: 600;
+}
+.history-arrow {
+  width: 13px;
+  height: 13px;
+  color: #d54401;
+  flex-shrink: 0;
+}
+.history-by {
+  font-size: 0.66rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+.history-date-lead {
+  color: #1a140c;
+  font-weight: 600;
+}
+.history-load-more {
+  align-self: center;
+  background: #ffffff;
+  border: 1px solid #d6d3d1;
+  color: #1a140c;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+  transition: background 0.12s;
+}
+.history-load-more:hover:not(:disabled) {
+  background: #f5f4f1;
+}
+.history-load-more:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.history-end-marker {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 8px 0 0;
+}
+
+/* Sections par jour dans la sidebar Historique */
+.history-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history-day-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.history-day-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1a140c;
+  text-align: left;
+  transition: background 0.12s;
+}
+.history-day-header:hover {
+  background: #f8f7f4;
+}
+.history-day-chevron {
+  width: 14px;
+  height: 14px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.history-day-label {
+  flex: 1;
+  text-transform: capitalize;
+}
+.history-day-badge {
+  background: #d54401;
+  color: #ffffff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.history-day-list-items {
+  border-top: 1px solid #f3f4f6;
+  padding: 8px;
+  background: #fafafa;
+  gap: 6px;
+}
+
+/* Accordéon historique dans la modale lot */
+.lot-history-accordion {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.lot-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  color: #44403c;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.lot-history-toggle:hover { color: #1a140c; }
+.lot-history-chevron {
+  width: 14px;
+  height: 14px;
+}
+.lot-history-count {
+  color: #9ca3af;
+  font-weight: 500;
+  font-size: 0.72rem;
+}
+.lot-history-body {
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.lot-history-empty {
+  font-size: 0.74rem;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+  padding: 4px 0;
+}
+.lot-history-list .history-item {
+  background: #ffffff;
 }
 
 /* Alias pour rétro-compat */

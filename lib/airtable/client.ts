@@ -8,6 +8,7 @@ export const TABLE_IDS = {
   Depots: "tblXP2p2xgQ7yRSW6",
   Caissons: "tblkilMNlWg0pQY4h",
   Destinations: "tbl9C2FJ91XMoXvDp",
+  LogsLots: "tblNK5sY1zO7esi5y",
 } as const;
 
 let cachedBase: Base | null = null;

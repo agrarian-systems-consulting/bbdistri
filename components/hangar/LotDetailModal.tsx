@@ -21,6 +21,7 @@ import type {
   Lot,
   StatutTriage,
 } from "@/lib/types/domain";
+import { LotHistoryAccordion } from "./LotHistoryAccordion";
 
 export type LotPatch = {
   statut?: StatutTriage;
@@ -266,6 +267,8 @@ export function LotDetailModal({
               placeholder="—"
             />
           </div>
+
+          <LotHistoryAccordion key={lot.id} lotId={lot.id} />
         </div>
 
         <DialogFooter className="flex sm:justify-between gap-2">
