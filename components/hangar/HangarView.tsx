@@ -115,8 +115,9 @@ export function HangarView({
   const queryClient = useQueryClient();
 
   // Source de vérité unique : tous les lots Hangar non-Épuisé.
-  // Init depuis le fetch server-side (initialData), refetch 5 min en arrière-plan
+  // Init depuis le fetch server-side (initialData), refetch 1 h en arrière-plan
   // pour suivre les modifs d'autres opérateurs ou les modifs directes Airtable.
+  // (5 min initialement, élargi à 1 h pour limiter la conso réseau du hangar.)
   const {
     data: lots = initialLots,
     dataUpdatedAt,
@@ -131,8 +132,8 @@ export function HangarView({
       return data.lots;
     },
     initialData: initialLots,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    refetchInterval: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
