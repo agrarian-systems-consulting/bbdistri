@@ -96,19 +96,18 @@ async function getHangarDepotId(): Promise<string> {
 /**
  * Lots pertinents pour la vue Hangar.
  *
- * On retient (hors statut Epuisé) :
- *   - les lots rattachés au dépôt Hangar (comportement historique, on garde
- *     même les "Non affecté" pour qu'ils restent visibles sur le plan) ;
- *   - les lots SANS aucun dépôt saisi : toujours visibles s'ils sont placés
- *     (un lot physiquement dans une allée ne doit jamais être invisible sur
- *     le plan, quel que soit son statut), et sinon seulement s'ils sont
- *     actifs (≠ "Non affecté"). C'est le rattrapage des lots dont le dépôt
- *     n'a pas été renseigné : sans ça, ils n'apparaissent jamais dans le
- *     hangar ni dans l'AddLotModal.
+ * On retient (hors statut Epuisé) tout lot qui est soit rattaché au dépôt
+ * Hangar, soit sans aucun dépôt saisi — y compris les "Non affecté" : la
+ * récolte n'est pas toujours saisie au bureau, et il faut quand même pouvoir
+ * localiser/placer ces lots via l'AddLotModal.
  *
  * On exclut volontairement les lots rattachés à un AUTRE dépôt (cellules,
  * silos, caserne…) : ils sont physiquement rangés ailleurs et n'ont pas à
  * être proposés à l'ajout dans le hangar.
+ *
+ * NB : les "Non affecté" sont délibérément masqués de la sidebar « à placer »
+ * côté HangarView (sinon ~450 lots l'inonderaient) — ils restent accessibles
+ * à la recherche dans l'AddLotModal.
  */
 export async function fetchHangarLots(): Promise<Lot[]> {
   const [all, hangarId] = await Promise.all([
@@ -117,10 +116,6 @@ export async function fetchHangarLots(): Promise<Lot[]> {
   ]);
   return all.filter((lot) => {
     if (lot.statut === "Epuisé") return false;
-    if (lot.depotIds.includes(hangarId)) return true;
-    if (lot.depotIds.length === 0) {
-      return lot.emplacementIds.length > 0 || lot.statut !== "Non affecté";
-    }
-    return false;
+    return lot.depotIds.includes(hangarId) || lot.depotIds.length === 0;
   });
 }

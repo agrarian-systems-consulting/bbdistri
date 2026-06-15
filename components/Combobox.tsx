@@ -50,6 +50,13 @@ export function Combobox({
       )
     : options;
 
+  // On ne monte qu'un nombre borné de <li> : sans ça, une liste de plusieurs
+  // centaines de lots (Non affecté inclus) rendrait l'ouverture saccadée. La
+  // recherche, elle, porte toujours sur l'intégralité de `filtered`.
+  const MAX_VISIBLE = 200;
+  const visible = filtered.slice(0, MAX_VISIBLE);
+  const hiddenCount = filtered.length - visible.length;
+
   useEffect(() => {
     setActiveIndex(-1);
   }, [query]);
@@ -120,7 +127,7 @@ export function Combobox({
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, filtered.length - 1));
+      setActiveIndex((i) => Math.min(i + 1, visible.length - 1));
       return;
     }
     if (e.key === "ArrowUp") {
@@ -130,8 +137,8 @@ export function Combobox({
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      if (activeIndex >= 0 && filtered[activeIndex]) {
-        handleSelect(filtered[activeIndex]);
+      if (activeIndex >= 0 && visible[activeIndex]) {
+        handleSelect(visible[activeIndex]);
       }
     }
   }
@@ -147,7 +154,7 @@ export function Combobox({
       {filtered.length === 0 ? (
         <li className="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>
       ) : (
-        filtered.map((option, i) => {
+        visible.map((option, i) => {
           const isSelected = option.value === value;
           const isActive = i === activeIndex;
           return (
@@ -214,6 +221,11 @@ export function Combobox({
           );
         })
       )}
+      {hiddenCount > 0 ? (
+        <li className="px-3 py-2 text-xs text-gray-400 italic border-t border-gray-100">
+          +{hiddenCount} autres — affine la recherche
+        </li>
+      ) : null}
     </ul>
   ) : null;
 

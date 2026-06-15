@@ -164,16 +164,19 @@ export function HangarView({
     () => lots.filter((l) => l.emplacementIds.length > 0),
     [lots],
   );
+  // Sidebar « à placer » : on exclut les "Non affecté" (≈450 lots dont la
+  // récolte n'est pas encore saisie) pour ne pas noyer la liste. Ils restent
+  // localisables via la recherche de l'AddLotModal (cf. addableLots).
   const unplacedLots = useMemo(
-    () => lots.filter((l) => l.emplacementIds.length === 0),
+    () =>
+      lots.filter(
+        (l) => l.emplacementIds.length === 0 && l.statut !== "Non affecté",
+      ),
     [lots],
   );
-  // AddLotModal n'a pas vocation à proposer les "Non affecté" : l'utilisateur
-  // doit changer leur statut dans Airtable d'abord.
-  const addableLots = useMemo(
-    () => lots.filter((l) => l.statut !== "Non affecté"),
-    [lots],
-  );
+  // AddLotModal : tous les lots du périmètre Hangar, y compris les "Non
+  // affecté", pour pouvoir localiser un lot avant même la saisie de la récolte.
+  const addableLots = lots;
 
   const lotsParEmp = useMemo(
     () => groupLotsByEmplacement(placedLots),
@@ -659,8 +662,9 @@ export function HangarView({
         onAddLotClick={handleAddLotClick}
       />
       <p className="footer-note">
-        Vraies données Airtable. Lots <em>Epuisé</em> et dépôt ≠{" "}
-        <em>Hangar</em> filtrés en amont.
+        Vraies données Airtable. Lots <em>Epuisé</em> et lots rattachés à un
+        autre dépôt que le <em>Hangar</em> filtrés en amont (les lots sans
+        dépôt sont conservés).
       </p>
       {openSidebar === "allotements" ? (
         <AllotementSidebar

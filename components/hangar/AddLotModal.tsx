@@ -18,7 +18,7 @@ import type { Emplacement, Lot } from "@/lib/types/domain";
 type Props = {
   emplacement: Emplacement | null;
   emplacementsById: Map<string, Emplacement>;
-  /** Lots éligibles (= hors Épuisé et hors Non affecté) venant du state HangarView. */
+  /** Lots éligibles (périmètre Hangar : hors Épuisé, hors autre dépôt) venant du state HangarView. */
   addableLots: Lot[];
   onClose: () => void;
   onAdd: (lot: Lot, emplacement: Emplacement) => Promise<void>;
@@ -126,9 +126,9 @@ export function AddLotModal({
               placeholder={`Rechercher parmi ${addableLots.length} lots…`}
             />
             <p className="text-xs text-stone-500">
-              Les lots au statut <em>Épuisé</em> ou <em>Non affecté</em>{" "}
-              n&apos;apparaissent pas dans cette liste : modifier leur statut
-              dans Airtable d&apos;abord si tu dois les replacer.
+              Les lots <em>Non affecté</em> (récolte pas encore saisie) sont
+              inclus pour pouvoir les localiser. Seuls les lots <em>Épuisé</em>{" "}
+              ou rattachés à un autre dépôt n&apos;apparaissent pas.
             </p>
           </div>
 
