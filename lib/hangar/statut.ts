@@ -6,8 +6,8 @@ import type { StatutTriage } from "@/lib/types/domain";
  */
 const STATUT_CLASS: Record<StatutTriage, string> = {
   Brut: "statut-Brut",
+  "En cours de triage": "statut-En-cours",
   Trié: "statut-Trie",
-  "Trié stocké": "statut-Trie-stocke",
   "A retrier": "statut-A-retrier",
   "Non affecté": "statut-Non-affecte",
   Epuisé: "statut-Epuise",

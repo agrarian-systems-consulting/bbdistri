@@ -3,8 +3,8 @@ export type Zone = (typeof ZONES)[number];
 
 export const STATUTS_TRIAGE = [
   "Brut",
+  "En cours de triage",
   "Trié",
-  "Trié stocké",
   "A retrier",
   "Non affecté",
   "Epuisé",

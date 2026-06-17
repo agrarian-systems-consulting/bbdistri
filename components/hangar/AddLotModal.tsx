@@ -30,7 +30,7 @@ function StatutChip({ statut }: { statut: string }) {
     "statut-Trie": "var(--statut-trie)",
     "statut-Brut": "var(--statut-brut)",
     "statut-A-retrier": "var(--statut-aretrier)",
-    "statut-Trie-stocke": "var(--statut-triestocke)",
+    "statut-En-cours": "var(--statut-encours)",
     "statut-Non-affecte": "var(--statut-nonaffecte)",
     "statut-Epuise": "var(--statut-nonaffecte)",
   }[klass];

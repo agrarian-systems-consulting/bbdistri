@@ -48,9 +48,9 @@ const LEGEND_STATUTS: Array<{
   { label: "Brut", statut: "Brut", color: "var(--statut-brut)" },
   { label: "À retrier", statut: "A retrier", color: "var(--statut-aretrier)" },
   {
-    label: "Trié stocké",
-    statut: "Trié stocké",
-    color: "var(--statut-triestocke)",
+    label: "En cours de triage",
+    statut: "En cours de triage",
+    color: "var(--statut-encours)",
   },
 ];
 

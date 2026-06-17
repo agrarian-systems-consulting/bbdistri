@@ -152,7 +152,7 @@
   --statut-trie: #4caf50;
   --statut-brut: #ff9800;
   --statut-nonaffecte: #9e9e9e;
-  --statut-triestocke: #2196f3;
+  --statut-encours: #2196f3;
   --statut-aretrier: #d81b60;
   --highlight: #fff176;
   --highlight-border: #fbc02d;
@@ -780,7 +780,7 @@ body.historique-on .footer-note {
 .badge-statut.statut-Trie  { border-color: var(--statut-trie); color: #166534; }
 .badge-statut.statut-Brut  { border-color: var(--statut-brut); color: #9a3412; }
 .badge-statut.statut-A-retrier { border-color: var(--statut-aretrier); color: #9f1239; }
-.badge-statut.statut-Trie-stocke { border-color: var(--statut-triestocke); color: #1e40af; }
+.badge-statut.statut-En-cours { border-color: var(--statut-encours); color: #1e40af; }
 .allotement-content {
   padding: 0 12px 12px !important;
 }
@@ -868,7 +868,7 @@ body.historique-on .footer-note {
 .unplaced-item.statut-Trie        { border-left-color: var(--statut-trie); }
 .unplaced-item.statut-Brut        { border-left-color: var(--statut-brut); }
 .unplaced-item.statut-A-retrier   { border-left-color: var(--statut-aretrier); }
-.unplaced-item.statut-Trie-stocke { border-left-color: var(--statut-triestocke); }
+.unplaced-item.statut-En-cours { border-left-color: var(--statut-encours); }
 .unplaced-item.statut-Non-affecte { border-left-color: var(--statut-nonaffecte); }
 .unplaced-item-main {
   flex: 1;
@@ -1156,7 +1156,7 @@ body.is-dragging .lot-add-placeholder {
 .lot.statut-Trie        { border-left-color: var(--statut-trie); }
 .lot.statut-Brut        { border-left-color: var(--statut-brut); }
 .lot.statut-Non-affecte { border-left-color: var(--statut-nonaffecte); }
-.lot.statut-Trie-stocke { border-left-color: var(--statut-triestocke); }
+.lot.statut-En-cours { border-left-color: var(--statut-encours); }
 .lot.statut-A-retrier   { border-left-color: var(--statut-aretrier); }
 .lot.statut-Epuise      { border-left-color: var(--statut-nonaffecte); }
 .lot-num {
