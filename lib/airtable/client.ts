@@ -11,6 +11,16 @@ export const TABLE_IDS = {
   LogsLots: "tblNK5sY1zO7esi5y",
 } as const;
 
+/**
+ * IDs de records de référence, stables quel que soit leur libellé.
+ * Le dépôt principal peut être renommé librement dans Airtable (ex. "Hangar"
+ * → "BBDistri") sans impacter le code : on le résout par cet ID, jamais par
+ * son nom.
+ */
+export const RECORD_IDS = {
+  DepotHangar: "recAcfsTxopxDiyFe",
+} as const;
+
 let cachedBase: Base | null = null;
 
 export function getBase(): Base {

@@ -1,6 +1,6 @@
 import "server-only";
 import type { FieldSet, Record as AirtableRecord } from "airtable";
-import { getBase, TABLE_IDS } from "./client";
+import { getBase, RECORD_IDS, TABLE_IDS } from "./client";
 import type { BioC2, LightLot, Lot, StatutTriage } from "@/lib/types/domain";
 
 const LOT_FIELDS = [
@@ -78,19 +78,13 @@ export async function fetchLightLots(): Promise<LightLot[]> {
   });
 }
 
-let cachedHangarDepotId: string | null = null;
-
-async function getHangarDepotId(): Promise<string> {
-  if (cachedHangarDepotId) return cachedHangarDepotId;
-  const records = await getBase()(TABLE_IDS.Depots).select().all();
-  const hangar = records.find((r) => r.get("Name") === "Hangar");
-  if (!hangar) {
-    throw new Error(
-      `Dépôt "Hangar" introuvable dans la table Dépôts (${TABLE_IDS.Depots})`,
-    );
-  }
-  cachedHangarDepotId = hangar.id;
-  return hangar.id;
+/**
+ * ID du dépôt principal. Résolu par ID de record (et non par libellé) pour
+ * que le dépôt puisse être renommé librement dans Airtable sans casser l'app.
+ * Cf. RECORD_IDS.DepotHangar dans client.ts.
+ */
+function getHangarDepotId(): string {
+  return RECORD_IDS.DepotHangar;
 }
 
 /**
@@ -110,10 +104,8 @@ async function getHangarDepotId(): Promise<string> {
  * à la recherche dans l'AddLotModal.
  */
 export async function fetchHangarLots(): Promise<Lot[]> {
-  const [all, hangarId] = await Promise.all([
-    fetchAllLots(),
-    getHangarDepotId(),
-  ]);
+  const all = await fetchAllLots();
+  const hangarId = getHangarDepotId();
   return all.filter((lot) => {
     if (lot.statut === "Epuisé") return false;
     return lot.depotIds.includes(hangarId) || lot.depotIds.length === 0;
