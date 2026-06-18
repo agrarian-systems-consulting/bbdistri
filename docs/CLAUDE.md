@@ -81,6 +81,24 @@ Détails complets dans le fichier `contexte_projet_interface_hangar.md`.
 - **Badges caisson** : cachés en vue globale (cards déjà chargées), visibles en fullscreen + modale
 - **Zone vrac** (Prépa commande) : pas d'allées numérotées, juste une grille de cards
 
+## Journal des mouvements (logs) — ⚠️ logique répartie app + Airtable
+
+Le « Log sur lots » (`tblNK5sY1zO7esi5y`) est alimenté par **deux sources** qui se partagent les rôles **sans se chevaucher** :
+
+| Événement | Source | `Modifié par` |
+|---|---|---|
+| **Première affectation** d'emplacement (vide → X), via app **ou** saisie directe Airtable | **Automation Airtable** « Log première affectation emplacement » | `Première affectation` |
+| **Déplacement** d'emplacement (X → Y) | App, `PATCH /api/lots/[id]` | `Hangar app` |
+| **Changement de statut** | App, `PATCH /api/lots/[id]` | `Hangar app` |
+
+**Pourquoi ce découpage** : les entrées de lots saisies directement dans Airtable (hors app) échappaient au journal. Une automation côté Airtable les capte. Pour éviter les doublons entre l'app et l'automation lors d'un placement via l'app, **l'app ne loggue volontairement PAS les premières affectations** (cf. `isFirstPlacement` dans [app/api/lots/[id]/route.ts](../app/api/lots/[id]/route.ts)) — elles appartiennent à l'automation.
+
+**Le garde-fou anti-doublon** est le champ rollup **`Nb mvts emplacements (pour automatisation log sur lots)`** sur la table Lots (= nombre de logs liés de type `emplacement`). L'automation ne se déclenche que si ce compteur = 0 ; dès qu'elle crée le log, il passe à 1 et elle ne re-tire plus. Pas de case à cocher.
+
+**Limites connues** :
+- Un **déplacement** fait directement dans Airtable (hors app) n'est pas journalisé (l'automation ne couvre que la 1ʳᵉ affectation).
+- 85 entrées historiques ont été *backfillées* le 2026-06-18 (`Modifié par = Backfill entrée historique`, date = création du lot ; les 126 lots Épuisé exclus). Supprimables en bloc par ce tag.
+
 ## Mode de travail (important pour les écritures Airtable)
 
 **Phase test (au démarrage)** :
