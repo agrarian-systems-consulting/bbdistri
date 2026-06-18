@@ -188,10 +188,19 @@ export async function PATCH(
       initialState.emplacements,
       finalEmplacements,
     );
-    if (statutChanged || emplacementsChanged) {
+    // Première affectation (l'emplacement passe de vide à rempli) : on NE loggue
+    // PAS côté app. C'est une automation Airtable qui en est la seule source
+    // (déclencheur : emplacement non vide + compteur de logs emplacement = 0),
+    // ce qui couvre aussi les entrées saisies directement dans Airtable et évite
+    // les doublons liés à la course app↔automation. L'app ne loggue donc que les
+    // déplacements (emplacement initial non vide) et les changements de statut.
+    const isFirstPlacement =
+      initialState.emplacements.length === 0 && emplacementsChanged;
+    const logEmplacement = emplacementsChanged && !isFirstPlacement;
+    if (statutChanged || logEmplacement) {
       const types: string[] = [];
       if (statutChanged) types.push("statut");
-      if (emplacementsChanged) types.push("emplacement");
+      if (logEmplacement) types.push("emplacement");
       try {
         await createLogEntry({
           lotId: id,
