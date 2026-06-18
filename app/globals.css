@@ -143,7 +143,6 @@
   --zone-b-bg: #f0eed5;
   --zone-c-bg: #f7e0e0;
   --zone-prep-bg: #e6f3e6;
-  --zone-tampon-bg: #ede0f5;
   --allee-border: #b6a890;
   --allee-header-bg: #d6cab1;
   --allee-empty: #e8e3d7;
@@ -923,12 +922,9 @@ body.historique-on .footer-note {
 
 .rang-bas {
   display: grid;
-  grid-template-columns: 15fr 5fr 20fr;
+  grid-template-columns: 20fr 20fr;
   gap: 4px;
   padding: 4px;
-}
-.rang-bas.no-tampon {
-  grid-template-columns: 15fr 20fr;
 }
 
 .allee-passage {
@@ -970,7 +966,6 @@ body.historique-on .footer-note {
 .zone-B      { background: var(--zone-b-bg); }
 .zone-C      { background: var(--zone-c-bg); }
 .zone-PREP   { background: var(--zone-prep-bg); }
-.zone-TAMPON { background: var(--zone-tampon-bg); }
 
 .zone-label {
   position: absolute;
@@ -1022,10 +1017,9 @@ body.historique-on .footer-note {
 }
 .zone-A .allees { grid-template-columns: repeat(17, 1fr); }
 .zone-B .allees { grid-template-columns: repeat(20, 1fr); }
-.zone-C .allees { grid-template-columns: repeat(15, 1fr); }
+.zone-C .allees { grid-template-columns: repeat(20, 1fr); }
 
-.zone-PREP .prep-content,
-.zone-TAMPON .prep-content {
+.zone-PREP .prep-content {
   flex: 1;
   padding: 38px 6px 6px;
   display: grid;
@@ -1033,12 +1027,7 @@ body.historique-on .footer-note {
   gap: 3px;
   align-content: start;
 }
-.zone-TAMPON .prep-content {
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-  padding: 38px 3px 3px;
-}
-.zone-PREP .lot,
-.zone-TAMPON .lot {
+.zone-PREP .lot {
   min-height: 38px;
 }
 

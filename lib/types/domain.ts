@@ -1,4 +1,4 @@
-export const ZONES = ["A", "B", "C", "PREP", "TAMPON"] as const;
+export const ZONES = ["A", "B", "C", "PREP"] as const;
 export type Zone = (typeof ZONES)[number];
 
 export const STATUTS_TRIAGE = [

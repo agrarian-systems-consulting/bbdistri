@@ -114,8 +114,7 @@ export function LotDetailModal({
       A: 0,
       PREP: 1,
       C: 2,
-      TAMPON: 3,
-      B: 4,
+      B: 3,
     };
     return Array.from(emplacementsById.values())
       .map((e) => ({ value: e.id, label: e.name, zone: e.zone, allee: e.allee }))

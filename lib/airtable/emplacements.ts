@@ -9,14 +9,14 @@ function isAbcZone(value: unknown): value is "A" | "B" | "C" {
 
 /**
  * Le champ Airtable "Zone" n'a que les options A / B / C.
- * Les zones vrac PREP et TAMPON sont identifiées par le nom de l'emplacement :
+ * La zone vrac PREP est identifiée par le nom de l'emplacement :
  *   - "Zone préparation commande" → PREP
- *   - "Zone-tampon"               → TAMPON
  * (cf. data réelle base test 2026-05-26)
+ * NB : l'emplacement "Zone-tampon" existe encore dans Airtable mais n'est plus
+ * exposé au front — il est filtré dans fetchAllEmplacements.
  */
 function detectZone(rawZone: unknown, name: string): Zone {
   if (name === "Zone préparation commande") return "PREP";
-  if (name === "Zone-tampon") return "TAMPON";
   if (isAbcZone(rawZone)) return rawZone;
   if (typeof rawZone === "string" && (ZONES as readonly string[]).includes(rawZone)) {
     return rawZone as Zone;
@@ -29,7 +29,9 @@ export async function fetchAllEmplacements(): Promise<Emplacement[]> {
     .select({ fields: ["Name", "Zone", "Allée"] })
     .all();
 
-  return records.map((r) => {
+  return records
+    .filter((r) => (r.get("Name") as string | undefined) !== "Zone-tampon")
+    .map((r) => {
     const name = (r.get("Name") as string | undefined) ?? "";
     const allee = r.get("Allée");
     return {

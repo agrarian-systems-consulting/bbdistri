@@ -36,23 +36,22 @@ export function groupEmplacementsByZone(
 const MAX_ALLEES: Record<Zone, number> = {
   A: 17,
   B: 20,
-  C: 15,
+  C: 20,
   PREP: Number.POSITIVE_INFINITY,
-  TAMPON: Number.POSITIVE_INFINITY,
 };
 
 /**
  * Tri des allées selon la convention du hangar (cf. docs/CLAUDE.md) :
  * - Zone A : décroissant (A17 → A01), max 17
  * - Zone B : décroissant (B20 → B01), max 20
- * - Zone C : croissant (C1 → C15), max 15
- * - PREP / TAMPON : ordre stable d'insertion, pas de filtre numérique
+ * - Zone C : croissant (C1 → C20), max 20
+ * - PREP : ordre stable d'insertion, pas de filtre numérique
  */
 export function sortEmplacements(
   emplacements: Emplacement[],
   zone: Zone,
 ): Emplacement[] {
-  if (zone === "PREP" || zone === "TAMPON") return emplacements;
+  if (zone === "PREP") return emplacements;
 
   const max = MAX_ALLEES[zone];
   const filtered = emplacements.filter((e) => {

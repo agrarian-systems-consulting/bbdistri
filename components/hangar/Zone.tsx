@@ -17,7 +17,6 @@ const ZONE_LABELS: Record<ZoneType, string> = {
   B: "ZONE B",
   C: "ZONE C",
   PREP: "ZONE PRÉPARATION COMMANDE",
-  TAMPON: "TAMPON",
 };
 
 type Props = {
@@ -111,7 +110,7 @@ export function Zone(props: Props) {
     isFullscreen,
     onToggleFullscreen,
   } = props;
-  const vrac = zone === "PREP" || zone === "TAMPON";
+  const vrac = zone === "PREP";
   const childProps = {
     caissonsById: props.caissonsById,
     hoveredLotId: props.hoveredLotId,

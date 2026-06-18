@@ -48,12 +48,12 @@ Interface web pour les warehouse operators de la SCIC Graines équitables, qui g
 +-----------------------------------------------+
 |           ALLÉE DE PASSAGE HORIZONTALE        |   ← rang milieu (vide)
 +-----------------------------------------------+
-|  ZONE C       | TAMPON |     ZONE B            |   ← rang bas
-|  C1 → C15     |  vrac  |   B20 ← ... ← B01     |     (C cr., B déc.)
+|  ZONE C              |     ZONE B            |   ← rang bas
+|  C1 → C20            |   B20 ← ... ← B01     |     (C cr., B déc.)
 +-----------------------------------------------+
 ```
 
-**Données réelles** : 77 allées physiques (A01-A17, B01-B20, C1-C15) + 2 zones vrac (prépa commande, tampon). 280 lots placés au total, dont 119 Épuisé qu'on filtre toujours côté UI. 19 groupes d'allotement détectés (clé Produit+Destination identique sur 2+ lots).
+**Données réelles** : 82 allées physiques (A01-A17, B01-B20, C1-C20) + 1 zone vrac (prépa commande). La Zone-tampon a été retirée du front (l'emplacement subsiste dans Airtable, filtré côté serveur) ; les lots qui y restaient sont tous Épuisé, donc déjà masqués. 280 lots placés au total, dont 119 Épuisé qu'on filtre toujours côté UI. 19 groupes d'allotement détectés (clé Produit+Destination identique sur 2+ lots).
 
 ## Tables Airtable utilisées
 
@@ -62,7 +62,7 @@ Base : **"SCIC Graines équitables"** — `app7BMeStHVHQo3Tz`
 | Table | ID | Rôle |
 |---|---|---|
 | Lots | `tblLYUOw0rwL5OJAT` | Table centrale. Champs clés : Lot (primary), Statut triage, Produit (court, lookup vers Catalogue), Bio/C2, Emplacements (multipleRecordLinks), Dépôt, Caissons, CléSuggestionAllotement (formula) |
-| Emplacements | `tblV0Kws9SasEAM3g` | Référentiel physique. Name (formula = Zone+Allée), Zone (singleSelect A/B/C/PREP/TAMPON), Allée (texte), Lots (lien retour) |
+| Emplacements | `tblV0Kws9SasEAM3g` | Référentiel physique. Name (formula = Zone+Allée), Zone (singleSelect A/B/C/PREP ; l'option TAMPON existe encore dans Airtable mais n'est plus exposée au front), Allée (texte), Lots (lien retour) |
 | Catalogue | `tblnXQZs7n8JIejlD` | Produits (artdesignation, artcode, sous-famille...) |
 | Dépôts | `tblXP2p2xgQ7yRSW6` | Le dépôt principal s'appelle juste **"Hangar"** dans Airtable. Filtrer Dépôt = "Hangar" pour la V1 (le reste = cellules/silos/big bags, hors scope) |
 | Caissons métalliques | `tblkilMNlWg0pQY4h` | Caissons réutilisables (lien depuis Lots) |
@@ -75,11 +75,11 @@ Détails complets dans le fichier `contexte_projet_interface_hangar.md`.
 - **Filtrage par défaut** : ne pas afficher les lots `Statut triage = "Epuisé"`, ni les lots du Dépôt ≠ "Hangar"
 - **Multi-emplacements** : un lot peut être dans plusieurs allées (cas réel : lot 23-079 dispersé sur 7 allées). Le déplacement d'une portion doit déclencher une modale de confirmation avec choix "cette portion seulement" / "tout regrouper"
 - **Fusion automatique** : si on drag un lot vers une allée qui contient déjà ce lot, la confirmation propose "fusionner" (= retirer de la source, l'addition est idempotente)
-- **Ordre des allées** : A décroissant (A17 à gauche → A01 à droite), B décroissant (B20 → B01), C croissant (C1 → C15)
+- **Ordre des allées** : A décroissant (A17 à gauche → A01 à droite), B décroissant (B20 → B01), C croissant (C1 → C20)
 - **Undo** : toast 5s en bas à droite après déplacement ou ajout, avec snapshot des emplacements impactés pour restauration
 - **Hover** : passer sur un lot multi-emplacements met en surbrillance ses autres portions
 - **Badges caisson** : cachés en vue globale (cards déjà chargées), visibles en fullscreen + modale
-- **Zones vrac** (Prépa commande, Tampon) : pas d'allées numérotées, juste une grille de cards
+- **Zone vrac** (Prépa commande) : pas d'allées numérotées, juste une grille de cards
 
 ## Mode de travail (important pour les écritures Airtable)
 

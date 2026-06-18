@@ -64,9 +64,6 @@ export function HangarPlan(props: Props) {
           )}
         />
         <Zone
-          {...zoneProps("TAMPON", props.empsParZone.get("TAMPON") ?? [])}
-        />
-        <Zone
           {...zoneProps(
             "B",
             sortEmplacements(props.empsParZone.get("B") ?? [], "B"),
