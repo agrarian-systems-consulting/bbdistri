@@ -6,6 +6,7 @@ import type { BioC2, LightLot, Lot, StatutTriage } from "@/lib/types/domain";
 const LOT_FIELDS = [
   "Lot",
   "Statut triage",
+  "Campagne",
   "Produit (court)",
   "Bio/C2",
   "Emplacements",
@@ -28,6 +29,7 @@ function recordToLot(record: AirtableRecord<FieldSet>): Lot {
   const produitCourt = record.get("Produit (court)") as string[] | undefined;
   const cle = record.get("CléSuggestionAllotement");
   const comm = record.get("Commentaire");
+  const campagne = record.get("Campagne");
 
   return {
     id: record.id,
@@ -35,6 +37,8 @@ function recordToLot(record: AirtableRecord<FieldSet>): Lot {
     statut:
       (record.get("Statut triage") as StatutTriage | undefined) ??
       "Non affecté",
+    campagne:
+      typeof campagne === "string" && campagne.length > 0 ? campagne : null,
     produit: produitCourt?.[0] ?? null,
     bioC2: normalizeBioC2(record.get("Bio/C2")),
     emplacementIds: (record.get("Emplacements") as string[] | undefined) ?? [],

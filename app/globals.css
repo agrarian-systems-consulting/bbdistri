@@ -841,6 +841,37 @@ body.historique-on .footer-note {
 }
 
 /* Sidebar "Lots à placer" : liste draggable */
+.campagne-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.campagne-item {
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+.campagne-trigger {
+  padding: 8px 12px !important;
+  cursor: pointer;
+  width: 100%;
+}
+.campagne-trigger:hover { text-decoration: none !important; }
+.campagne-trigger-inner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.campagne-trigger-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111827;
+}
+.campagne-content {
+  padding: 0 8px 8px !important;
+}
 .unplaced-list {
   list-style: none;
   padding: 0;

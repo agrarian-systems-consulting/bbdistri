@@ -17,6 +17,7 @@ export type Lot = {
   id: string;
   nom: string;
   statut: StatutTriage;
+  campagne: string | null;
   produit: string | null;
   bioC2: BioC2 | null;
   emplacementIds: string[];
