@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Combobox } from "@/components/Combobox";
+import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import { MultiCombobox } from "@/components/MultiCombobox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,7 @@ export type LotPatch = {
   caissonIds?: string[];
   emplacementIds?: string[];
   destinationIds?: string[];
+  produitIds?: string[];
 };
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -43,6 +44,10 @@ type Props = {
   emplacementsById: Map<string, Emplacement>;
   caissonsById: Record<string, string>;
   destinationsById: Record<string, string>;
+  /** Options d'articles (Catalogue) pour rattacher un écart de tri. */
+  catalogueOptions: ComboboxOption[];
+  /** True si le lot est un écart dont le code article reste à préciser. */
+  needsArticleCode: boolean;
   onClose: () => void;
   onSave: (lot: Lot, patch: LotPatch) => Promise<void>;
 };
@@ -62,6 +67,8 @@ export function LotDetailModal({
   emplacementsById,
   caissonsById,
   destinationsById,
+  catalogueOptions,
+  needsArticleCode,
   onClose,
   onSave,
 }: Props) {
@@ -71,6 +78,7 @@ export function LotDetailModal({
   const [caissonIds, setCaissonIds] = useState<string[]>([]);
   const [emplacementIds, setEmplacementIds] = useState<string[]>([]);
   const [destinationIds, setDestinationIds] = useState<string[]>([]);
+  const [produitId, setProduitId] = useState<string>("");
   const [confirmEpuiseOpen, setConfirmEpuiseOpen] = useState(false);
 
   useEffect(() => {
@@ -81,6 +89,7 @@ export function LotDetailModal({
     setCaissonIds(lot.caissonIds);
     setEmplacementIds(lot.emplacementIds);
     setDestinationIds(lot.destinationIds);
+    setProduitId(lot.produitIds[0] ?? "");
   }, [lot]);
 
   if (!lot) {
@@ -97,13 +106,17 @@ export function LotDetailModal({
   const caissonsDirty = !arraysEqual(caissonIds, lot.caissonIds);
   const emplacementsDirty = !arraysEqual(emplacementIds, lot.emplacementIds);
   const destinationsDirty = !arraysEqual(destinationIds, lot.destinationIds);
+  // Le produit n'est éditable que pour les écarts « à préciser ».
+  const produitDirty =
+    needsArticleCode && produitId !== "" && produitId !== (lot.produitIds[0] ?? "");
   const dirty =
     statut !== lot.statut ||
     newBioC2 !== lot.bioC2 ||
     newCommentaire !== oldCommentaire ||
     caissonsDirty ||
     emplacementsDirty ||
-    destinationsDirty;
+    destinationsDirty ||
+    produitDirty;
 
   const destinationOptions = Object.entries(destinationsById)
     .map(([value, label]) => ({ value, label }))
@@ -139,6 +152,7 @@ export function LotDetailModal({
     if (caissonsDirty) patch.caissonIds = caissonIds;
     if (emplacementsDirty) patch.emplacementIds = emplacementIds;
     if (destinationsDirty) patch.destinationIds = destinationIds;
+    if (produitDirty) patch.produitIds = [produitId];
     // Fire-and-forget : la modale ferme immédiatement, la synchro Airtable
     // se voit dans le toast loading → success/error en bas à droite.
     void onSave(lot, patch);
@@ -185,6 +199,24 @@ export function LotDetailModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {needsArticleCode ? (
+            <div className="space-y-1.5 rounded-md border border-amber-300 bg-amber-50 p-3">
+              <Label className="text-amber-900">
+                Article à préciser (écart de tri)
+              </Label>
+              <Combobox
+                options={catalogueOptions}
+                value={produitId}
+                onChange={(v) => setProduitId(v)}
+                placeholder="Rechercher un code ou un libellé article…"
+              />
+              <p className="text-xs text-amber-700">
+                Ce lot est rattaché à l&apos;article générique{" "}
+                <span className="font-mono">APRECISER</span>. Choisis le vrai
+                code article pour le rattacher définitivement.
+              </p>
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lot-statut">Statut triage</Label>

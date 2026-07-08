@@ -19,6 +19,9 @@ export type Lot = {
   statut: StatutTriage;
   campagne: string | null;
   produit: string | null;
+  /** Record IDs de l'article lié (table Catalogue). Sert au rattachement
+   * d'un écart de tri dont le code article reste à préciser. */
+  produitIds: string[];
   bioC2: BioC2 | null;
   emplacementIds: string[];
   caissonIds: string[];

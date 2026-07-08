@@ -27,6 +27,11 @@ import {
   groupLotsByEmplacement,
 } from "@/lib/hangar/layout";
 import {
+  buildCodeByProduitId,
+  isAPreciserCode,
+  lotNeedsArticleCode,
+} from "@/lib/hangar/produit";
+import {
   analyzeMove,
   computeNewEmplacementIds,
   type MoveAction,
@@ -38,8 +43,11 @@ import type {
   StatutTriage,
   Zone as ZoneType,
 } from "@/lib/types/domain";
+import type { CatalogueItem } from "@/lib/airtable/catalogue";
+import type { ComboboxOption } from "@/components/Combobox";
 import { AddLotModal } from "./AddLotModal";
 import { AllotementSidebar } from "./AllotementSidebar";
+import { ArticleAPreciserSidebar } from "./ArticleAPreciserSidebar";
 import { HangarPlan } from "./HangarPlan";
 import { HistorySidebar } from "./HistorySidebar";
 import { LotDetailModal, type LotPatch } from "./LotDetailModal";
@@ -54,6 +62,7 @@ type Props = {
   emplacements: Emplacement[];
   caissonsById: Record<string, string>;
   destinationsById: Record<string, string>;
+  catalogue: CatalogueItem[];
 };
 
 type PendingMove = {
@@ -68,6 +77,7 @@ async function patchLot(
     emplacementIds?: string[];
     caissonIds?: string[];
     destinationIds?: string[];
+    produitIds?: string[];
     statut?: string;
     bioC2?: string | null;
     commentaire?: string | null;
@@ -96,6 +106,7 @@ export function HangarView({
   emplacements,
   caissonsById,
   destinationsById,
+  catalogue,
 }: Props) {
   const [hoveredLotId, setHoveredLotId] = useState<string | null>(null);
   const [fullscreenZone, setFullscreenZone] = useState<ZoneType | null>(null);
@@ -208,6 +219,36 @@ export function HangarView({
     return m;
   }, [lots]);
 
+  // Catalogue : map recordId → code (détection APRECISER) + label (optimistic).
+  const codeByProduitId = useMemo(
+    () => buildCodeByProduitId(catalogue),
+    [catalogue],
+  );
+  const labelByProduitId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const item of catalogue) m.set(item.id, item.label);
+    return m;
+  }, [catalogue]);
+  // Options du sélecteur d'article : on exclut le placeholder APRECISER
+  // (rattacher un écart à « à préciser » n'a pas de sens). Code + libellé.
+  const catalogueOptions = useMemo<ComboboxOption[]>(
+    () =>
+      catalogue
+        .filter((item) => item.code !== "" && !isAPreciserCode(item.code))
+        .map((item) => ({
+          value: item.id,
+          label: `${item.code} — ${item.label}`,
+          parts: [item.code, item.label],
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [catalogue],
+  );
+  // Écarts de tri dont le code article reste à préciser.
+  const aPreciserLots = useMemo(
+    () => lots.filter((l) => lotNeedsArticleCode(l, codeByProduitId)),
+    [lots, codeByProduitId],
+  );
+
   useEffect(() => {
     if (!fullscreenZone) return;
     document.body.classList.add("has-fullscreen");
@@ -222,6 +263,10 @@ export function HangarView({
     if (openSidebar === "unplaced") {
       document.body.classList.add("unplaced-on");
       return () => document.body.classList.remove("unplaced-on");
+    }
+    if (openSidebar === "apreciser") {
+      document.body.classList.add("apreciser-on");
+      return () => document.body.classList.remove("apreciser-on");
     }
     if (openSidebar === "historique") {
       document.body.classList.add("historique-on");
@@ -381,6 +426,7 @@ export function HangarView({
           caissonIds?: string[];
           emplacementIds?: string[];
           destinationIds?: string[];
+          produitIds?: string[];
         } = {};
         if (previous.statut !== undefined) payload.statut = previous.statut;
         if (previous.bioC2 !== undefined) payload.bioC2 = previous.bioC2;
@@ -392,6 +438,8 @@ export function HangarView({
           payload.emplacementIds = previous.emplacementIds;
         if (previous.destinationIds !== undefined)
           payload.destinationIds = previous.destinationIds;
+        if (previous.produitIds !== undefined)
+          payload.produitIds = previous.produitIds;
         await patchLot(lot.id, payload);
         void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
@@ -427,8 +475,21 @@ export function HangarView({
         previous.emplacementIds = lot.emplacementIds;
       if (effectivePatch.destinationIds !== undefined)
         previous.destinationIds = lot.destinationIds;
+      if (effectivePatch.produitIds !== undefined) {
+        previous.produitIds = lot.produitIds;
+        previous.produit = lot.produit;
+      }
 
-      updateLotInCache(lot.id, effectivePatch);
+      // Optimistic : le patch porte produitIds mais pas le libellé « produit »
+      // affiché ; on le résout depuis le catalogue pour rafraîchir l'UI.
+      const optimistic: Partial<Lot> = { ...effectivePatch };
+      if (effectivePatch.produitIds !== undefined) {
+        const newProduitId = effectivePatch.produitIds[0];
+        optimistic.produit = newProduitId
+          ? (labelByProduitId.get(newProduitId) ?? lot.produit)
+          : null;
+      }
+      updateLotInCache(lot.id, optimistic);
 
       let pendingCancel = false;
       const loadingId = toast.loading(
@@ -451,6 +512,7 @@ export function HangarView({
           caissonIds: effectivePatch.caissonIds,
           emplacementIds: effectivePatch.emplacementIds,
           destinationIds: effectivePatch.destinationIds,
+          produitIds: effectivePatch.produitIds,
         });
         void queryClient.invalidateQueries({ queryKey: ["logs"] });
         toast.dismiss(loadingId);
@@ -481,7 +543,7 @@ export function HangarView({
         });
       }
     },
-    [undoLotPatch, updateLotInCache],
+    [undoLotPatch, updateLotInCache, labelByProduitId],
   );
 
   const placeUnplaced = useCallback(
@@ -622,6 +684,9 @@ export function HangarView({
   );
 
   const activeDragLot = activeDragLotId ? lotsById.get(activeDragLotId) : null;
+  const editingLot = editingLotId
+    ? (lotsById.get(editingLotId) ?? null)
+    : null;
 
   return (
     <DndContext
@@ -634,6 +699,7 @@ export function HangarView({
         totalLots={lots.length}
         totalEmplacements={emplacements.length}
         unplacedCount={unplacedLots.length}
+        aPreciserCount={aPreciserLots.length}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
         openSidebar={openSidebar}
@@ -683,6 +749,14 @@ export function HangarView({
           onLotClick={handleLotClick}
         />
       ) : null}
+      {openSidebar === "apreciser" ? (
+        <ArticleAPreciserSidebar
+          lots={aPreciserLots}
+          emplacementsById={empsById}
+          onClose={() => setOpenSidebar(null)}
+          onLotClick={handleLotClick}
+        />
+      ) : null}
       {openSidebar === "historique" ? (
         <HistorySidebar onClose={() => setOpenSidebar(null)} />
       ) : null}
@@ -692,10 +766,16 @@ export function HangarView({
         onCancel={() => setPendingMove(null)}
       />
       <LotDetailModal
-        lot={editingLotId ? (lotsById.get(editingLotId) ?? null) : null}
+        lot={editingLot}
         emplacementsById={empsById}
         caissonsById={caissonsById}
         destinationsById={destinationsById}
+        catalogueOptions={catalogueOptions}
+        needsArticleCode={
+          editingLot
+            ? lotNeedsArticleCode(editingLot, codeByProduitId)
+            : false
+        }
         onClose={() => setEditingLotId(null)}
         onSave={handleSaveLotPatch}
       />

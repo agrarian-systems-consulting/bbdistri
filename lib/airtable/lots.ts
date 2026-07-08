@@ -7,6 +7,7 @@ const LOT_FIELDS = [
   "Lot",
   "Statut triage",
   "Campagne",
+  "Produit",
   "Produit (court)",
   "Bio/C2",
   "Emplacements",
@@ -40,6 +41,7 @@ function recordToLot(record: AirtableRecord<FieldSet>): Lot {
     campagne:
       typeof campagne === "string" && campagne.length > 0 ? campagne : null,
     produit: produitCourt?.[0] ?? null,
+    produitIds: (record.get("Produit") as string[] | undefined) ?? [],
     bioC2: normalizeBioC2(record.get("Bio/C2")),
     emplacementIds: (record.get("Emplacements") as string[] | undefined) ?? [],
     caissonIds: (record.get("Caissons") as string[] | undefined) ?? [],

@@ -10,6 +10,7 @@ type PatchBody = {
   emplacementIds?: string[];
   caissonIds?: string[];
   destinationIds?: string[];
+  produitIds?: string[];
   statut?: StatutTriage;
   bioC2?: BioC2 | null;
   commentaire?: string | null;
@@ -115,6 +116,15 @@ export async function PATCH(
       );
     }
     fields.Destination = body.destinationIds;
+  }
+  if (body.produitIds !== undefined) {
+    if (!Array.isArray(body.produitIds)) {
+      return NextResponse.json(
+        { error: "produitIds doit être un tableau" },
+        { status: 400 },
+      );
+    }
+    fields.Produit = body.produitIds;
   }
   if (body.statut !== undefined) {
     if (!isStatut(body.statut)) {

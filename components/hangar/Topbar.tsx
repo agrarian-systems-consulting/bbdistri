@@ -1,15 +1,20 @@
 "use client";
 
-import { Combine, History, RefreshCw } from "lucide-react";
+import { Combine, History, RefreshCw, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { StatutTriage } from "@/lib/types/domain";
 
-export type SidebarKind = "allotements" | "unplaced" | "historique";
+export type SidebarKind =
+  | "allotements"
+  | "unplaced"
+  | "apreciser"
+  | "historique";
 
 type Props = {
   totalLots: number;
   totalEmplacements: number;
   unplacedCount: number;
+  aPreciserCount: number;
   activeStatuts: Set<StatutTriage>;
   searchQuery: string;
   openSidebar: SidebarKind | null;
@@ -58,6 +63,7 @@ export function Topbar({
   totalLots,
   totalEmplacements,
   unplacedCount,
+  aPreciserCount,
   activeStatuts,
   searchQuery,
   openSidebar,
@@ -131,6 +137,19 @@ export function Topbar({
           <span>À placer</span>
           {unplacedCount > 0 ? (
             <span className="topbar-pill-badge">{unplacedCount}</span>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          className={`topbar-pill ${openSidebar === "apreciser" ? "active" : ""}`}
+          onClick={() => onToggleSidebar("apreciser")}
+          aria-pressed={openSidebar === "apreciser"}
+          title="Écarts de tri dont le code article reste à préciser"
+        >
+          <Tag />
+          <span>Article à préciser</span>
+          {aPreciserCount > 0 ? (
+            <span className="topbar-pill-badge">{aPreciserCount}</span>
           ) : null}
         </button>
         <button

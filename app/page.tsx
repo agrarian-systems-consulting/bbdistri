@@ -1,5 +1,6 @@
 import { HangarView } from "@/components/hangar/HangarView";
 import { fetchCaissonsById } from "@/lib/airtable/caissons";
+import { fetchCatalogue } from "@/lib/airtable/catalogue";
 import { fetchDestinationsById } from "@/lib/airtable/destinations";
 import { fetchAllEmplacements } from "@/lib/airtable/emplacements";
 import { fetchHangarLots } from "@/lib/airtable/lots";
@@ -7,15 +8,17 @@ import { fetchHangarLots } from "@/lib/airtable/lots";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let lots, emplacements, caissonsById, destinationsById;
+  let lots, emplacements, caissonsById, destinationsById, catalogue;
   let error: string | null = null;
   try {
-    [lots, emplacements, caissonsById, destinationsById] = await Promise.all([
-      fetchHangarLots(),
-      fetchAllEmplacements(),
-      fetchCaissonsById(),
-      fetchDestinationsById(),
-    ]);
+    [lots, emplacements, caissonsById, destinationsById, catalogue] =
+      await Promise.all([
+        fetchHangarLots(),
+        fetchAllEmplacements(),
+        fetchCaissonsById(),
+        fetchDestinationsById(),
+        fetchCatalogue(),
+      ]);
   } catch (err) {
     error = err instanceof Error ? err.message : "Erreur inconnue";
   }
@@ -25,7 +28,8 @@ export default async function Home() {
     !lots ||
     !emplacements ||
     !caissonsById ||
-    !destinationsById
+    !destinationsById ||
+    !catalogue
   ) {
     return (
       <main className="flex flex-1 items-center justify-center p-8">
@@ -48,6 +52,7 @@ export default async function Home() {
       emplacements={emplacements}
       caissonsById={caissonsById}
       destinationsById={destinationsById}
+      catalogue={catalogue}
     />
   );
 }
