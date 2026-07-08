@@ -47,6 +47,19 @@ const MAX_ALLEES: Record<Zone, number> = {
  * - Zone C : croissant (C1 → C22), max 22
  * - PREP : ordre stable d'insertion, pas de filtre numérique
  */
+/**
+ * Numéro d'allée d'un emplacement. On lit d'abord le champ `Allée` ; s'il
+ * n'est pas numérique (vide, ou saisi "C21" au lieu de "21"), on retombe sur
+ * les chiffres en fin de nom ("C21" → 21). Évite qu'un emplacement bien réel
+ * disparaisse du plan à cause d'une saisie Airtable un peu différente.
+ */
+function alleeNumber(e: Emplacement): number {
+  const direct = Number.parseInt(String(e.allee ?? "").trim(), 10);
+  if (Number.isFinite(direct)) return direct;
+  const m = e.name.match(/(\d+)\s*$/);
+  return m ? Number.parseInt(m[1], 10) : Number.NaN;
+}
+
 export function sortEmplacements(
   emplacements: Emplacement[],
   zone: Zone,
@@ -55,14 +68,14 @@ export function sortEmplacements(
 
   const max = MAX_ALLEES[zone];
   const filtered = emplacements.filter((e) => {
-    const n = Number(e.allee);
+    const n = alleeNumber(e);
     return Number.isFinite(n) && n >= 1 && n <= max;
   });
 
   const reversed = zone === "A" || zone === "B";
   return filtered.sort((a, b) => {
-    const an = Number(a.allee);
-    const bn = Number(b.allee);
+    const an = alleeNumber(a);
+    const bn = alleeNumber(b);
     return reversed ? bn - an : an - bn;
   });
 }
