@@ -211,9 +211,10 @@ export function LotDetailModal({
                 placeholder="Rechercher un code ou un libellé article…"
               />
               <p className="text-xs text-amber-700">
-                Ce lot est rattaché à l&apos;article générique{" "}
-                <span className="font-mono">APRECISER</span>. Choisis le vrai
-                code article pour le rattacher définitivement.
+                Ce lot n&apos;a pas encore de code article défini (article
+                générique <span className="font-mono">APRECISER</span> ou aucun
+                article lié). Choisis le vrai code article pour le rattacher
+                définitivement.
               </p>
             </div>
           ) : null}

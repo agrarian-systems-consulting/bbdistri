@@ -32,13 +32,16 @@ export function buildCodeByProduitId(
 }
 
 /**
- * True si le lot est un écart de tri dont le code article reste à préciser,
- * c.-à-d. rattaché à un article dont l'artcode vaut « APRECISER ».
+ * True si le code article du lot reste à préciser, c.-à-d. :
+ *  - aucun article n'est lié au lot, OU
+ *  - l'article lié est le générique dont l'artcode vaut « APRECISER ».
+ * Dans les deux cas on ne sait pas encore à quel article rattacher le lot.
  */
 export function lotNeedsArticleCode(
   lot: Lot,
   codeByProduitId: Map<string, string>,
 ): boolean {
+  if (lot.produitIds.length === 0) return true;
   return lot.produitIds.some((id) => {
     const code = codeByProduitId.get(id);
     return code !== undefined && isAPreciserCode(code);

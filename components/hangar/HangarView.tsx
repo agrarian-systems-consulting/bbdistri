@@ -243,9 +243,16 @@ export function HangarView({
         .sort((a, b) => a.label.localeCompare(b.label)),
     [catalogue],
   );
-  // Écarts de tri dont le code article reste à préciser.
+  // Écarts de tri dont le code article reste à préciser. On exclut les
+  // "Non affecté" (≈450 lots dont la récolte n'est pas encore saisie) pour ne
+  // pas noyer la liste, comme pour la sidebar « à placer ». Le sélecteur
+  // d'article reste néanmoins disponible dans la modale si on ouvre un tel lot.
   const aPreciserLots = useMemo(
-    () => lots.filter((l) => lotNeedsArticleCode(l, codeByProduitId)),
+    () =>
+      lots.filter(
+        (l) =>
+          l.statut !== "Non affecté" && lotNeedsArticleCode(l, codeByProduitId),
+      ),
     [lots, codeByProduitId],
   );
 
