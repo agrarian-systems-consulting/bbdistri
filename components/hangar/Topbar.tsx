@@ -12,7 +12,6 @@ export type SidebarKind =
 
 type Props = {
   totalLots: number;
-  totalEmplacements: number;
   unplacedCount: number;
   aPreciserCount: number;
   activeStatuts: Set<StatutTriage>;
@@ -61,7 +60,6 @@ const LEGEND_STATUTS: Array<{
 
 export function Topbar({
   totalLots,
-  totalEmplacements,
   unplacedCount,
   aPreciserCount,
   activeStatuts,
@@ -79,9 +77,9 @@ export function Topbar({
   return (
     <header className="topbar">
       <div>
-        <h1>Interface Hangar — SCIC Graines équitables</h1>
+        <h1>BBDistri</h1>
         <span className="subtitle">
-          {totalLots} lots actifs · {totalEmplacements} emplacements ·{" "}
+          {totalLots} lots actifs ·{" "}
           <span className="sync-indicator">
             <span className="sync-text">
               {isSyncing ? "synchronisation…" : `synchronisé ${relativeSync}`}
@@ -147,7 +145,7 @@ export function Topbar({
           title="Écarts de tri dont le code article reste à préciser"
         >
           <Tag />
-          <span>Article à préciser</span>
+          <span>À préciser</span>
           {aPreciserCount > 0 ? (
             <span className="topbar-pill-badge">{aPreciserCount}</span>
           ) : null}

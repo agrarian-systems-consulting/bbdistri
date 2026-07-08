@@ -697,7 +697,6 @@ export function HangarView({
     >
       <Topbar
         totalLots={lots.length}
-        totalEmplacements={emplacements.length}
         unplacedCount={unplacedLots.length}
         aPreciserCount={aPreciserLots.length}
         activeStatuts={activeStatuts}

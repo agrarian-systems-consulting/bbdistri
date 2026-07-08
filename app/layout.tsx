@@ -18,7 +18,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Interface Hangar — SCIC Graines équitables",
+  title: "BBDistri",
   description:
     "Gestion des lots de céréales bio dans le hangar de la SCIC Graines équitables.",
 };
