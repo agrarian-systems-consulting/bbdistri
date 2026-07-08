@@ -1020,7 +1020,7 @@ body.historique-on .footer-note {
 
 .rang-bas {
   display: grid;
-  grid-template-columns: 20fr 20fr;
+  grid-template-columns: 22fr 20fr;
   gap: 4px;
   padding: 4px;
 }
@@ -1115,7 +1115,7 @@ body.historique-on .footer-note {
 }
 .zone-A .allees { grid-template-columns: repeat(17, 1fr); }
 .zone-B .allees { grid-template-columns: repeat(20, 1fr); }
-.zone-C .allees { grid-template-columns: repeat(20, 1fr); }
+.zone-C .allees { grid-template-columns: repeat(22, 1fr); }
 
 .zone-PREP .prep-content {
   flex: 1;
