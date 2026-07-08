@@ -21,7 +21,7 @@ import {
   parseDroppableEmplacementId,
   UNPLACED_SOURCE,
 } from "@/lib/hangar/dnd-ids";
-import { computeAllotementGroups } from "@/lib/hangar/filters";
+import { computeAllotementGroups, matchesSearch } from "@/lib/hangar/filters";
 import {
   groupEmplacementsByZone,
   groupLotsByEmplacement,
@@ -188,6 +188,24 @@ export function HangarView({
   // AddLotModal : tous les lots du périmètre Hangar, y compris les "Non
   // affecté", pour pouvoir localiser un lot avant même la saisie de la récolte.
   const addableLots = lots;
+
+  // Décompte des lots correspondant à la recherche, séparé plan / non placés :
+  // rassure quand le plan semble « tout grisé » (un match isolé dans un coin,
+  // ou un lot actif encore à placer). Nul si pas de recherche active.
+  const searchMatchCount = useMemo(
+    () =>
+      searchQuery.trim()
+        ? placedLots.filter((l) => matchesSearch(l, searchQuery)).length
+        : 0,
+    [placedLots, searchQuery],
+  );
+  const searchUnplacedMatchCount = useMemo(
+    () =>
+      searchQuery.trim()
+        ? unplacedLots.filter((l) => matchesSearch(l, searchQuery)).length
+        : 0,
+    [unplacedLots, searchQuery],
+  );
 
   const lotsParEmp = useMemo(
     () => groupLotsByEmplacement(placedLots),
@@ -706,6 +724,8 @@ export function HangarView({
         totalLots={lots.length}
         unplacedCount={unplacedLots.length}
         aPreciserCount={aPreciserLots.length}
+        searchMatchCount={searchMatchCount}
+        searchUnplacedMatchCount={searchUnplacedMatchCount}
         activeStatuts={activeStatuts}
         searchQuery={searchQuery}
         openSidebar={openSidebar}

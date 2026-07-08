@@ -248,6 +248,20 @@ body.hangar-bg {
   font-family: inherit;
 }
 .search-bar input:focus { border-color: var(--statut-trie); }
+.search-count {
+  font-size: 0.72rem;
+  color: #d7cdb9;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.search-count strong {
+  color: #f5f1ea;
+  font-weight: 700;
+}
+.search-count-empty {
+  color: #f0b37e;
+  opacity: 1;
+}
 .search-bar button {
   background: transparent;
   border: 1px solid #4a3f30;
