@@ -201,9 +201,7 @@ export function LotDetailModal({
         <div className="space-y-4">
           {needsArticleCode ? (
             <div className="space-y-1.5 rounded-md border border-amber-300 bg-amber-50 p-3">
-              <Label className="text-amber-900">
-                Article à préciser (écart de tri)
-              </Label>
+              <Label className="text-amber-900">Article à préciser</Label>
               <Combobox
                 options={catalogueOptions}
                 value={produitId}

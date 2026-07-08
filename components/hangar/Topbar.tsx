@@ -1,6 +1,6 @@
 "use client";
 
-import { Combine, History, RefreshCw, Tag } from "lucide-react";
+import { Combine, History, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { StatutTriage } from "@/lib/types/domain";
 
@@ -144,7 +144,6 @@ export function Topbar({
           aria-pressed={openSidebar === "apreciser"}
           title="Écarts de tri dont le code article reste à préciser"
         >
-          <Tag />
           <span>À préciser</span>
           {aPreciserCount > 0 ? (
             <span className="topbar-pill-badge">{aPreciserCount}</span>
