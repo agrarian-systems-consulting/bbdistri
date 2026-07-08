@@ -36,7 +36,7 @@ export function groupEmplacementsByZone(
 const MAX_ALLEES: Record<Zone, number> = {
   A: 17,
   B: 20,
-  C: 20,
+  C: 22,
   PREP: Number.POSITIVE_INFINITY,
 };
 
@@ -44,7 +44,7 @@ const MAX_ALLEES: Record<Zone, number> = {
  * Tri des allées selon la convention du hangar (cf. docs/CLAUDE.md) :
  * - Zone A : décroissant (A17 → A01), max 17
  * - Zone B : décroissant (B20 → B01), max 20
- * - Zone C : croissant (C1 → C20), max 20
+ * - Zone C : croissant (C1 → C22), max 22
  * - PREP : ordre stable d'insertion, pas de filtre numérique
  */
 export function sortEmplacements(

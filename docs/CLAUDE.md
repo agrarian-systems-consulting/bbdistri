@@ -49,11 +49,11 @@ Interface web pour les warehouse operators de la SCIC Graines équitables, qui g
 |           ALLÉE DE PASSAGE HORIZONTALE        |   ← rang milieu (vide)
 +-----------------------------------------------+
 |  ZONE C              |     ZONE B            |   ← rang bas
-|  C1 → C20            |   B20 ← ... ← B01     |     (C cr., B déc.)
+|  C1 → C22            |   B20 ← ... ← B01     |     (C cr., B déc.)
 +-----------------------------------------------+
 ```
 
-**Données réelles** : 82 allées physiques (A01-A17, B01-B20, C1-C20) + 1 zone vrac (prépa commande). La Zone-tampon a été retirée du front (l'emplacement subsiste dans Airtable, filtré côté serveur) ; les lots qui y restaient sont tous Épuisé, donc déjà masqués. 280 lots placés au total, dont 119 Épuisé qu'on filtre toujours côté UI. 19 groupes d'allotement détectés (clé Produit+Destination identique sur 2+ lots).
+**Données réelles** : 84 allées physiques (A01-A17, B01-B20, C1-C22) + 1 zone vrac (prépa commande). La Zone-tampon a été retirée du front (l'emplacement subsiste dans Airtable, filtré côté serveur) ; les lots qui y restaient sont tous Épuisé, donc déjà masqués. 280 lots placés au total, dont 119 Épuisé qu'on filtre toujours côté UI. 19 groupes d'allotement détectés (clé Produit+Destination identique sur 2+ lots).
 
 ## Tables Airtable utilisées
 
@@ -75,7 +75,7 @@ Détails complets dans le fichier `contexte_projet_interface_hangar.md`.
 - **Filtrage par défaut** : ne pas afficher les lots `Statut triage = "Epuisé"`, ni les lots du Dépôt ≠ "Hangar"
 - **Multi-emplacements** : un lot peut être dans plusieurs allées (cas réel : lot 23-079 dispersé sur 7 allées). Le déplacement d'une portion doit déclencher une modale de confirmation avec choix "cette portion seulement" / "tout regrouper"
 - **Fusion automatique** : si on drag un lot vers une allée qui contient déjà ce lot, la confirmation propose "fusionner" (= retirer de la source, l'addition est idempotente)
-- **Ordre des allées** : A décroissant (A17 à gauche → A01 à droite), B décroissant (B20 → B01), C croissant (C1 → C20)
+- **Ordre des allées** : A décroissant (A17 à gauche → A01 à droite), B décroissant (B20 → B01), C croissant (C1 → C22)
 - **Undo** : toast 5s en bas à droite après déplacement ou ajout, avec snapshot des emplacements impactés pour restauration
 - **Hover** : passer sur un lot multi-emplacements met en surbrillance ses autres portions
 - **Badges caisson** : cachés en vue globale (cards déjà chargées), visibles en fullscreen + modale
