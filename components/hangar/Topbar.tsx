@@ -111,7 +111,30 @@ export function Topbar({
       >
         <div className="search-bar">
           <div className="search-wrap">
+            {searchQuery.trim() ? (
+              <span
+                className={`search-badge ${
+                  searchMatchCount + searchUnplacedMatchCount === 0
+                    ? "search-badge-empty"
+                    : ""
+                }`}
+                title={
+                  searchMatchCount + searchUnplacedMatchCount === 0
+                    ? "Aucun résultat"
+                    : `${searchMatchCount} sur le plan${
+                        searchUnplacedMatchCount > 0
+                          ? ` · ${searchUnplacedMatchCount} non placé${
+                              searchUnplacedMatchCount > 1 ? "s" : ""
+                            }`
+                          : ""
+                      }`
+                }
+              >
+                {searchMatchCount + searchUnplacedMatchCount}
+              </span>
+            ) : null}
             <input
+              className={searchQuery.trim() ? "has-badge" : ""}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="🔍  Produit ou N°lot…"
@@ -129,30 +152,6 @@ export function Topbar({
             ✕
           </button>
         </div>
-        {searchQuery.trim() ? (
-          <span
-            className={`search-count ${
-              searchMatchCount + searchUnplacedMatchCount === 0
-                ? "search-count-empty"
-                : ""
-            }`}
-          >
-            {searchMatchCount + searchUnplacedMatchCount === 0 ? (
-              "aucun résultat"
-            ) : (
-              <>
-                <strong>{searchMatchCount}</strong> sur le plan
-                {searchUnplacedMatchCount > 0 ? (
-                  <>
-                    {" · "}
-                    <strong>{searchUnplacedMatchCount}</strong> non placé
-                    {searchUnplacedMatchCount > 1 ? "s" : ""}
-                  </>
-                ) : null}
-              </>
-            )}
-          </span>
-        ) : null}
         <button
           type="button"
           className={`topbar-pill ${openSidebar === "unplaced" ? "active" : ""}`}

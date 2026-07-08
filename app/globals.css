@@ -248,19 +248,27 @@ body.hangar-bg {
   font-family: inherit;
 }
 .search-bar input:focus { border-color: var(--statut-trie); }
-.search-count {
-  font-size: 0.72rem;
-  color: #d7cdb9;
-  white-space: nowrap;
-  opacity: 0.85;
-}
-.search-count strong {
-  color: #f5f1ea;
+/* Compteur de résultats logé dans l'input (à gauche) : ne décale pas la
+   rangée de la topbar quand il apparaît/disparaît. */
+.search-bar input.has-badge { padding-left: 34px; }
+.search-badge {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 18px;
+  text-align: center;
+  background: var(--statut-trie);
+  color: #10240f;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 8px;
   font-weight: 700;
+  pointer-events: none;
 }
-.search-count-empty {
-  color: #f0b37e;
-  opacity: 1;
+.search-badge-empty {
+  background: #f0b37e;
+  color: #3a2410;
 }
 .search-bar button {
   background: transparent;
